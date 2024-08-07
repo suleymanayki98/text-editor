@@ -1,4 +1,13 @@
 {
-  "about": [],
+  "about": [
+    {
+      "buttonText": "Contact me",
+      "email": "suleymanbilisim@gmail.com"
+    },
+    {
+      "buttonText": "data",
+      "email": "suleymanbilisim@gmail.com"
+    }
+  ],
   "description": []
 }

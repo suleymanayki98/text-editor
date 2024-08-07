@@ -1,70 +1,115 @@
-# Getting Started with Create React App
+# Drag and Drop Editor - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Bu proje, React ve Material-UI kullanılarak geliştirilmiş bir sürükle-bırak editörüdür. Kullanıcılar, çeşitli bileşenleri ekleyebilir, düzenleyebilir ve yeniden sıralayabilir.
 
-## Available Scripts
+## Kurulum
 
-In the project directory, you can run:
+## `cd frontend`
+
+### `npm install`
+
+## Projeyi Başlatma
 
 ### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Özellikler
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Sürükle ve bırak işlevselliği
+- Paragraf, başlık, buton ve sütun bileşenleri
+- Canlı kaynak kodu görüntüleme ve düzenleme
+- Geri alma ve yeniden yapma işlevleri
+- E-posta verilerini düzenleme modalı
+- Responsive tasarım
 
-### `npm test`
+## Bileşenler ve İşlevleri
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### DragDropEditor
+Ana bileşen olup, editörün tüm mantığını ve durumunu yönetir.
 
-### `npm run build`
+- `components`: Editördeki tüm bileşenleri içeren durum.
+- `sourceCode`: Her bölüm için HTML kaynak kodunu tutan durum.
+- `undoStack` ve `redoStack`: Geri alma ve yeniden yapma işlevselliği için.
+- `emailData`: E-posta verilerini saklar.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Temel işlevler:
+- `updateComponents`: Bileşenleri günceller ve değişiklikleri kaydeder.
+- `onDragStart`, `onDragOver`, `onDrop`: Sürükle-bırak işlevselliğini yönetir.
+- `undo`, `redo`: Geri alma ve yeniden yapma işlemlerini gerçekleştirir.
+- `handleSourceCodeChange`: Kaynak kodu değişikliklerini işler.
+- `renderComponent`: Her bir bileşeni render eder.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Sidebar
+Eklenebilecek bileşenleri içeren kenar çubuğu.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Paragraf, başlık, buton ve sütun bileşenlerini sürüklenebilir öğeler olarak sunar.
 
-### `npm run eject`
+### EditorArea
+Ana düzenleme alanı.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- Bileşenleri görüntüler ve düzenleme yapılmasına olanak tanır.
+- Kaynak kodu görüntüleme ve düzenleme özelliği sunar.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Toolbar
+Üst araç çubuğu.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- Kenar çubuğunu açma/kapama düğmesi
+- Geri alma ve yeniden yapma düğmeleri
+- Kaynak kodu gösterme/gizleme düğmesi
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### EmailModal
+E-posta verilerini düzenlemek için kullanılan modal.
 
-## Learn More
+- E-posta adresi ve buton metni gibi verileri düzenleme imkanı sunar.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### BackendService
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Backend isteklerini tutan servis
 
-### Code Splitting
+### Bileşen Türleri
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+1. **Paragraph (COMPONENT_TYPES.PARAGRAPH)**
+   - Düzenlenebilir metin paragrafı.
 
-### Analyzing the Bundle Size
+2. **Button (COMPONENT_TYPES.BUTTON)**
+   - E-posta gönderme işlevine sahip buton.
+   - E-posta verilerini düzenlemek için yan menü içerir.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+3. **Heading 1 (COMPONENT_TYPES.H1)**
+   - Büyük başlık bileşeni.
 
-### Making a Progressive Web App
+4. **Heading 2 (COMPONENT_TYPES.H2)**
+   - Orta boy başlık bileşeni.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+5. **Two Column Layout (COMPONENT_TYPES.TWO_COLUMN)**
+   - İki sütunlu düzen bileşeni.
+   - Her sütuna ayrı bileşenler eklenebilir.
 
-### Advanced Configuration
+6. **One Column Layout (COMPONENT_TYPES.ONE_COLUMN)**
+   - Tek sütunlu düzen bileşeni.
+   - İçine diğer bileşenler eklenebilir.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Her bileşen sürüklenebilir, düzenlenebilir ve silinebilir özelliktedir.
 
-### Deployment
+# Drag and Drop Editor - Backend
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## API Endpointleri
 
-### `npm run build` fails to minify
+- `GET /api/components`: Tüm bileşenleri getirir
+- `POST /api/components`: Yeni bileşenleri kaydeder
+- `GET /api/email-data`: Tüm e-posta verilerini getirir
+- `POST /api/email-data`: Yeni e-posta verilerini kaydeder
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Dosya Yapısı
+
+- `data.json`: Bileşenlerin saklandığı JSON dosyası
+- `emailData.json`: E-posta verilerinin saklandığı JSON dosyası
+
+## Kurulum
+
+## `cd backend`
+
+### `npm install`
+
+## Projeyi Başlatma
+
+### `node server.js`

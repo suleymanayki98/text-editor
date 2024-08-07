@@ -1,12 +1,13 @@
 // DragDropEditor.js
 import React, { useState, useEffect } from 'react';
-import { IconButton, Box, Container, Typography, TextField, Button, Modal } from '@mui/material';
+import { IconButton, Box, Container, Typography, TextField, Button } from '@mui/material';
 import Sidebar from './Sidebar';
 import EditorArea from './EditorArea';
 import Toolbar from './Toolbar';
 import { Icon } from '@iconify/react';
-import Grid from '@mui/material/Grid';
 import axios from 'axios';
+import EmailModal from './EmailModal';
+import * as BackendService from './BackendService';
 
 const COMPONENT_TYPES = {
   PARAGRAPH: 'paragraph',
@@ -32,26 +33,17 @@ const DragDropEditor = () => {
   const [currentEmailData, setCurrentEmailData] = useState({});
 
   useEffect(() => {
-    loadComponentsFromJson();
-    loadEmailDataFromJson();
+    loadComponents();
+    loadEmailData();
   }, []);
 
-  const loadComponentsFromJson = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/get-components');
-      setComponents(response.data);
-      updateSourceCode(response.data);
-    } catch (error) {
-      console.error('Error loading components:', error);
-    }
-  };
 
   const updateComponents = (newComponents) => {
     setUndoStack([...undoStack, components]);
     setRedoStack([]);
     setComponents(newComponents);
     updateSourceCode(newComponents);
-    saveComponentsToJson(newComponents);
+    BackendService.saveComponentsToJson(newComponents);
   };
   const clearEditor = () => {
     setComponents({ description: [], about: [] });
@@ -64,12 +56,22 @@ const DragDropEditor = () => {
     e.dataTransfer.setData('text/plain', JSON.stringify({ section, index, columnIndex }));
   };
 
-  const saveComponentsToJson = async (componentsData) => {
+  const loadComponents = async () => {
     try {
-      await axios.post('http://localhost:5000/api/save-components', { components: componentsData });
-      console.log('Components saved successfully');
+      const loadedComponents = await BackendService.loadComponentsFromJson();
+      setComponents(loadedComponents);
+      updateSourceCode(loadedComponents);
     } catch (error) {
-      console.error('Error saving components:', error);
+      console.error('Error loading components:', error);
+    }
+  };
+
+  const loadEmailData = async () => {
+    try {
+      const loadedEmailData = await BackendService.loadEmailDataFromJson();
+      setEmailData(loadedEmailData);
+    } catch (error) {
+      console.error('Error loading email data:', error);
     }
   };
 
@@ -87,7 +89,6 @@ const DragDropEditor = () => {
   };
 
   const parseComponents = (code, section) => {
-    console.log(code)
     const components = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(code, 'text/html');
@@ -99,39 +100,39 @@ const DragDropEditor = () => {
           text: element.textContent,
           id: `${section}-${components.length}`,
         };
-      } else if (element.tagName === 'H1') {
+      } if (element.tagName === 'H1') {
         return {
           type: COMPONENT_TYPES.H1,
           text: element.textContent,
           id: `${section}-${components.length}`,
         };
-      } else if (element.tagName === 'H2') {
+      } if (element.tagName === 'H2') {
         return {
           type: COMPONENT_TYPES.H2,
           text: element.textContent,
           id: `${section}-${components.length}`,
         };
-      } else if (element.tagName === 'BUTTON') {
+      } if (element.tagName === 'BUTTON') {
         return {
           type: COMPONENT_TYPES.BUTTON,
           text: element.textContent,
           id: `${section}-${components.length}`,
         };
-      } else if (element.classList.contains('two-column-layout')) {
+      }  if (element.classList.contains('two-column-layout')) {
         const columns = Array.from(element.children).map(column =>
           Array.from(column.children).map(parseElement)
         );
-        console.log(columns)
         return {
           type: COMPONENT_TYPES.TWO_COLUMN,
-          columns,
+          columns: columns.length ? columns : [[], []],
           id: `${section}-${components.length}`,
         };
-      } else if (element.classList.contains('one-column-layout')) {
-        const column = Array.from(element.children).map(parseElement);
+      }
+      if (element.classList.contains('one-column-layout')) {
+        const content = Array.from(element.children).map(parseElement);
         return {
           type: COMPONENT_TYPES.ONE_COLUMN,
-          column,
+          content: content || [],
           id: `${section}-${components.length}`,
         };
       }
@@ -217,23 +218,27 @@ const DragDropEditor = () => {
     const newComponents = JSON.parse(JSON.stringify(components));
 
     const insertComponent = (components, index, columnIndex, component) => {
-      console.log(sourceCode)
-      console.log(sourceCode)
       if (columnIndex !== undefined) {
         const indices = index.toString().split('-').map(Number);
         let current = components;
-        console.log(columnIndex)
 
         for (let i = 0; i < indices.length; i++) {
           if (i === indices.length - 1) {
-            // Son indekse ulaştığımızda, komponenti ekliyoruz
             if (!current[indices[i]]) {
-              current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
+              if (current.type === COMPONENT_TYPES.ONE_COLUMN) {
+                current.content.push(component);
+              } else {
+                current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
+                current[indices[i]].columns[columnIndex].push(component);
+              }
+            } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+              current[indices[i]].content.push(component);
+            } else {
+              if (!current[indices[i]].columns) {
+                current[indices[i]].columns = [[], []];
+              }
+              current[indices[i]].columns[columnIndex].push(component);
             }
-            if (!current[indices[i]].columns) {
-              current[indices[i]].columns = [[], []];
-            }
-            current[indices[i]].columns[columnIndex].push(component);
             return;
           }
 
@@ -243,16 +248,16 @@ const DragDropEditor = () => {
 
           if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
             current = current[indices[i]].columns[columnIndex];
+          } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+            current = current[indices[i]].content;
           } else {
             current = current[indices[i]];
           }
         }
       } else {
-        // Eğer columnIndex tanımlı değilse, index pozisyonuna ekle
         components.splice(index, 0, component);
       }
     };
-    console.log(newComponents)
 
 
     if (type && id) {
@@ -286,6 +291,8 @@ const DragDropEditor = () => {
           for (let i = 0; i < indices.length - 1; i++) {
             if (columnIndex !== undefined && current[indices[i]].columns) {
               current = current[indices[i]].columns[columnIndex];
+            } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+              current = current[indices[i]].content;
             } else {
               current = current[indices[i]];
             }
@@ -313,17 +320,6 @@ const DragDropEditor = () => {
     updateSourceCode(previousComponents);
   };
 
-  const loadEmailDataFromJson = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/get-email-data');
-      setEmailData(response.data);
-    } catch (error) {
-      console.error('Error loading email data:', error);
-    }
-  };
-
-
-
 
   const handleSaveEmailData = () => {
     const { section, index } = emailIndex;
@@ -333,17 +329,8 @@ const DragDropEditor = () => {
     }
     newEmailData[section][index] = currentEmailData;
     setEmailData(newEmailData);
-    saveEmailDataToJson(newEmailData);
+    BackendService.saveEmailDataToJson(newEmailData);
     handleCloseModal();
-  };
-
-  const saveEmailDataToJson = async (newEmailData) => {
-    try {
-      await axios.post('http://localhost:5000/api/save-email-data', { emailData: newEmailData });
-      console.log('Email data saved successfully');
-    } catch (error) {
-      console.error('Error saving email data:', error);
-    }
   };
 
   const handleEmailDataChange = (field, value) => {
@@ -352,78 +339,6 @@ const DragDropEditor = () => {
       [field]: value
     }));
   };
-
-  const renderButtonModal = (section, buttonIndex) => (
-    <Modal
-      open={modalOpen}
-      onClose={handleCloseModal}
-      aria-labelledby="modal-title"
-      aria-describedby="modal-description"
-    >
-      <Box
-        sx={{
-          borderRadius: '16px',
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 800,
-          bgcolor: 'background.paper',
-          p: 3,
-        }}
-      >
-        <h3 id="modal-title">Edit Button</h3>
-        <h4>Links</h4>
-        <p>You can add social media links or other links to the collection content.</p>
-        <Box sx={{
-          border: '1px solid',
-          borderColor: 'grey.400',
-          borderRadius: '8px',
-          padding: 10,
-          p: 2,
-        }}>
-          <Grid container spacing={2}>
-            <Grid item xs={2} container justifyContent="center" alignItems="center" style={{ height: '100%' }}>
-              <IconButton
-                size="small"
-                variant="outlined"
-                style={{ borderRadius: '10%', border: '1px solid #ddd', marginTop: '15px' }}
-              >
-                <Icon icon="arcticons:mail" width="24" height="24" style={{ color: 'black' }} />
-              </IconButton>
-              <p>Change Icon</p>
-            </Grid>
-            <Grid item xs={10}>
-              <TextField
-                style={{ borderRadius: '20px', margin: '10px' }}
-                label="Button Text"
-                fullWidth
-                variant="outlined"
-                value={currentEmailData.buttonText || ''}
-                onChange={(e) => handleEmailDataChange('buttonText', e.target.value)}
-              />
-              <TextField
-                style={{ borderRadius: '10px', margin: '10px' }}
-                label="Email"
-                fullWidth
-                variant="outlined"
-                value={currentEmailData.email || ''}
-                onChange={(e) => handleEmailDataChange('email', e.target.value)}
-              />
-            </Grid>
-          </Grid>
-        </Box>
-        <Box display="flex" justifyContent="flex-end" style={{ flexGrow: 1, marginTop: '25px', textTransform: 'capitalize', }}>
-          <Button variant="outlined" onClick={handleCloseModal}>Close</Button>
-          <Button style={{
-            marginLeft: '15px',
-          }} variant="contained" color="success" onClick={handleSaveEmailData}>
-            Save
-          </Button>
-        </Box>
-      </Box>
-    </Modal>
-  );
 
   const redo = () => {
     if (redoStack.length === 0) return;
@@ -438,11 +353,21 @@ const DragDropEditor = () => {
       draggingIndex.index === index &&
       draggingIndex.columnIndex === columnIndex;
 
-    const handleTextChange = (e) => {
+    const handleTextChange = (e, section, index, columnIndex) => {
       const newComponents = JSON.parse(JSON.stringify(components));
       if (columnIndex !== undefined) {
-        const [parentIndex, childIndex] = index.split('-').map(Number);
-        newComponents[section][parentIndex].columns[columnIndex][childIndex].text = e.target.value;
+        const indices = index.split('-').map(Number);
+        let current = newComponents[section];
+        for (let i = 0; i < indices.length - 1; i++) {
+          if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+            current = current[indices[i]].columns[columnIndex];
+          } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+            current = current[indices[i]].content;
+          } else {
+            current = current[indices[i]];
+          }
+        }
+        current[indices[indices.length - 1]].text = e.target.value;
       } else {
         newComponents[section][index].text = e.target.value;
       }
@@ -488,7 +413,7 @@ const DragDropEditor = () => {
                 fullWidth
                 multiline
                 value={component.text || ''}
-                onChange={handleTextChange}
+                onChange={(e) => handleTextChange(e, section, index, columnIndex)}
                 onBlur={() => setEditingIndex({ section: null, index: null, columnIndex: null })}
                 autoFocus
                 style={{
@@ -512,10 +437,9 @@ const DragDropEditor = () => {
         {component.type === COMPONENT_TYPES.H1 && (
           <div style={{ position: 'relative' }}>
             <Typography
-              variant="body1"
+              variant="h1"
               onClick={() => setEditingIndex({ section, index, columnIndex })}
               style={{
-                fontSize: '34px',
                 padding: '4px',
                 border: 'none',
                 boxShadow: 'none',
@@ -523,14 +447,13 @@ const DragDropEditor = () => {
                 visibility: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible',
               }}
             >
-              {component.text || 'Heading'}
+              {component.text || 'Heading 1'}
             </Typography>
             {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex && (
               <TextField
                 fullWidth
-                multiline
                 value={component.text || ''}
-                onChange={handleTextChange}
+                onChange={(e) => handleTextChange(e, section, index, columnIndex)}
                 onBlur={() => setEditingIndex({ section: null, index: null, columnIndex: null })}
                 autoFocus
                 style={{
@@ -545,19 +468,21 @@ const DragDropEditor = () => {
                 InputProps={{
                   style: {
                     backgroundColor: 'transparent',
+                    fontSize: '2em',
+                    fontWeight: 'bold',
                   },
                 }}
               />
             )}
           </div>
         )}
+
         {component.type === COMPONENT_TYPES.H2 && (
           <div style={{ position: 'relative' }}>
             <Typography
-              variant="body1"
+              variant="h2"
               onClick={() => setEditingIndex({ section, index, columnIndex })}
               style={{
-                fontSize: '32px',
                 padding: '4px',
                 border: 'none',
                 boxShadow: 'none',
@@ -565,14 +490,13 @@ const DragDropEditor = () => {
                 visibility: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible',
               }}
             >
-              {component.text || 'Heading'}
+              {component.text || 'Heading 2'}
             </Typography>
             {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex && (
               <TextField
                 fullWidth
-                multiline
                 value={component.text || ''}
-                onChange={handleTextChange}
+                onChange={(e) => handleTextChange(e, section, index, columnIndex)}
                 onBlur={() => setEditingIndex({ section: null, index: null, columnIndex: null })}
                 autoFocus
                 style={{
@@ -587,6 +511,8 @@ const DragDropEditor = () => {
                 InputProps={{
                   style: {
                     backgroundColor: 'transparent',
+                    fontSize: '1.5em',
+                    fontWeight: 'bold',
                   },
                 }}
               />
@@ -628,43 +554,19 @@ const DragDropEditor = () => {
         )}
         {component.type === COMPONENT_TYPES.TWO_COLUMN && (
           <Box
-            key={component.id}
-            display="flex"
-            justifyContent="space-between"
-            style={{ minHeight: '200px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px' }}
-          >
-            {component.columns.map((column, colIndex) => (
-              <Box
-                key={`${component.id}-col-${colIndex}`}
-                flex={1}
-                p={1}
-                border={1}
-                borderColor="grey.300"
-                borderRadius={2}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDrop(e, section, index, colIndex);
-                }}
-                style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}
-              >
-                {column.map((nestedComponent, nestedIndex) =>
-                  renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
-                )}
-              </Box>
-            ))}
-          </Box>
-        )}
-        {component.type === COMPONENT_TYPES.ONE_COLUMN && (
-          <Box
-            key={component.id}
-            style={{ border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px', padding: '10px' }}
-          >
+          key={component.id}
+          display="flex"
+          justifyContent="space-between"
+          style={{ minHeight: '200px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px' }}
+        >
+          {(component.columns || [[], []]).map((column, colIndex) => (
             <Box
+              key={`${component.id}-col-${colIndex}`}
+              flex={1}
+              p={1}
+              border={1}
+              borderColor="grey.300"
+              borderRadius={2}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -672,15 +574,39 @@ const DragDropEditor = () => {
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onDrop(e, section, index, 0);
+                onDrop(e, section, index, colIndex);
               }}
-              style={{ minHeight: '100px' }}
+              style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}
             >
-              {component.content.map((nestedComponent, nestedIndex) =>
-                renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
+              {(column || []).map((nestedComponent, nestedIndex) =>
+                renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
               )}
             </Box>
+          ))}
+        </Box>
+        )}
+        {component.type === COMPONENT_TYPES.ONE_COLUMN && (
+          <Box
+          key={component.id}
+          style={{ border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px', padding: '10px' }}
+        >
+          <Box
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDrop(e, section, index, 0);
+            }}
+            style={{ minHeight: '100px' }}
+          >
+            {(component.content || []).map((nestedComponent, nestedIndex) =>
+              renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
+            )}
           </Box>
+        </Box>
         )}
       </div>
     );
@@ -721,7 +647,13 @@ const DragDropEditor = () => {
           COMPONENT_TYPES={COMPONENT_TYPES}
         />
       )}
-      {renderButtonModal()}
+      <EmailModal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        currentEmailData={currentEmailData}
+        onSave={handleSaveEmailData}
+        onChange={handleEmailDataChange}
+      />
     </Container>
   );
 };
