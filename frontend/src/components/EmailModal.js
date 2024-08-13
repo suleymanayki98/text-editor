@@ -1,9 +1,44 @@
-// EmailModal.js
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Box, TextField, Button, Grid, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
+import CheckIcon from '@mui/icons-material/Check';
 
 const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
+  const [backgroundColor, setBackgroundColor] = useState(currentEmailData.backgroundColor || '#ffffff');
+  const [textColor, setTextColor] = useState(currentEmailData.textColor || '#000000');
+
+  const colors = ['#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+
+  const handleBackgroundColorChange = (color) => {
+    setBackgroundColor(color);
+    onChange('backgroundColor', color);
+  };
+
+  const handleTextColorChange = (color) => {
+    setTextColor(color);
+    onChange('textColor', color);
+  };
+
+  const ColorButton = ({ color, selected, onClick }) => (
+    <Button
+      onClick={onClick}
+      style={{
+        width: selected ? 45 : 40,
+        height: selected ? 45 : 40,
+        minWidth: 40,
+        borderRadius: '50%',
+        backgroundColor: color,
+        margin: 5,
+        border: color === '#ffffff' ? '2px solid #000' : selected ? '2px solid #333' : 'none',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      {selected && <CheckIcon style={{ color: color === '#ffffff' ? '#000000' : '#ffffff' }} />}
+    </Button>
+  );
+
   return (
     <Modal
       open={open}
@@ -52,6 +87,9 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
                 variant="outlined"
                 value={currentEmailData.buttonText || ''}
                 onChange={(e) => onChange('buttonText', e.target.value)}
+                InputProps={{
+                  style: { color: textColor }
+                }}
               />
               <TextField
                 style={{ borderRadius: '10px', margin: '10px' }}
@@ -60,9 +98,39 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
                 variant="outlined"
                 value={currentEmailData.email || ''}
                 onChange={(e) => onChange('email', e.target.value)}
+                InputProps={{
+                  style: { color: textColor }
+                }}
               />
             </Grid>
           </Grid>
+        </Box>
+        <Box mt={2}>
+          <h4>Background Color</h4>
+          <Box display="flex" flexWrap="wrap">
+            {colors.map((color) => (
+              <ColorButton
+                key={`bg-${color}`}
+                color={color}
+                style={{
+                  border: '1px dashed #000',
+                }}
+                selected={backgroundColor === color}
+                onClick={() => handleBackgroundColorChange(color)}
+              />
+            ))}
+          </Box>
+          <h4>Text Color</h4>
+          <Box display="flex" flexWrap="wrap">
+            {colors.map((color) => (
+              <ColorButton
+                key={`text-${color}`}
+                color={color}
+                selected={textColor === color}
+                onClick={() => handleTextColorChange(color)}
+              />
+            ))}
+          </Box>
         </Box>
         <Box display="flex" justifyContent="flex-end" style={{ flexGrow: 1, marginTop: '25px', textTransform: 'capitalize', }}>
           <Button variant="outlined" onClick={onClose}>Close</Button>
@@ -77,4 +145,4 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
   );
 };
 
-export default EmailModal;  
+export default EmailModal;

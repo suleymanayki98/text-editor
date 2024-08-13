@@ -5,7 +5,6 @@ import Sidebar from './Sidebar';
 import EditorArea from './EditorArea';
 import Toolbar from './Toolbar';
 import { Icon } from '@iconify/react';
-import axios from 'axios';
 import EmailModal from './EmailModal';
 import * as BackendService from './BackendService';
 
@@ -36,7 +35,12 @@ const DragDropEditor = () => {
     loadComponents();
     loadEmailData();
   }, []);
-
+  
+  const handleClose = (section, index) => {
+    const newComponents = JSON.parse(JSON.stringify(components));
+    newComponents[section] = newComponents[section].filter((_, i) => i !== index);
+    updateComponents(newComponents);
+  };
 
   const updateComponents = (newComponents) => {
     setUndoStack([...undoStack, components]);
@@ -118,7 +122,7 @@ const DragDropEditor = () => {
           text: element.textContent,
           id: `${section}-${components.length}`,
         };
-      }  if (element.classList.contains('two-column-layout')) {
+      } if (element.classList.contains('two-column-layout')) {
         const columns = Array.from(element.children).map(column =>
           Array.from(column.children).map(parseElement)
         );
@@ -264,7 +268,7 @@ const DragDropEditor = () => {
       // New component being added
       const newComponent = { type, id };
       if (type === COMPONENT_TYPES.PARAGRAPH) {
-        newComponent.text = 'This is a new paragraph.';
+        newComponent.text = "I'am a text. Click here to add your own text and edit me. It's easy";
       }
       if (type === COMPONENT_TYPES.H1) {
         newComponent.text = 'Heading';
@@ -394,7 +398,7 @@ const DragDropEditor = () => {
         draggable
       >
         {component.type === COMPONENT_TYPES.PARAGRAPH && (
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', border: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'none' : '1px dashed grey', }}>
             <Typography
               variant="body1"
               onClick={() => setEditingIndex({ section, index, columnIndex })}
@@ -447,7 +451,7 @@ const DragDropEditor = () => {
                 visibility: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible',
               }}
             >
-              {component.text || 'Heading 1'}
+              <p>{component.text || 'Heading 1'}</p>
             </Typography>
             {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex && (
               <TextField
@@ -468,8 +472,10 @@ const DragDropEditor = () => {
                 InputProps={{
                   style: {
                     backgroundColor: 'transparent',
-                    fontSize: '2em',
+                    fontSize: '2em', // h1 boyutuna eşdeğer yapıyor
                     fontWeight: 'bold',
+                    lineHeight: 'normal',
+                    margin: 0,
                   },
                 }}
               />
@@ -520,7 +526,14 @@ const DragDropEditor = () => {
           </div>
         )}
         {component.type === COMPONENT_TYPES.BUTTON && (
-          <div>
+          <div
+            style={{
+              border: '1px dashed grey',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <Button
               variant="text"
               component="a"
@@ -530,6 +543,8 @@ const DragDropEditor = () => {
                 color: 'black',
                 textTransform: 'capitalize',
                 textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               <IconButton size="small" variant="contained" style={{
@@ -543,30 +558,70 @@ const DragDropEditor = () => {
               </IconButton>
               {emailData[section]?.[index]?.buttonText || component.text || 'Contact me'}
             </Button>
-            <IconButton size="small" variant="contained" style={{
-              borderRadius: '10%',
-            }}
-              onClick={() => handleOpenModal(section, index)}>
-              <Icon icon="pepicons-pop:dots-y" width="24" height="24" style={{ color: 'black' }} />
-            </IconButton>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <IconButton size="small" variant="contained" onClick={() => handleOpenModal(section, index)} style={{
+                backgroundColor: '#f5f5f5',
+                borderRadius: '15%',
+                padding: 10,
+                color: 'black',
+                marginLeft: '10px'
+              }}>
+                <Icon icon="fluent:edit-28-filled" width="24" height="24"  />
+              </IconButton>
+              <IconButton size="small" variant="contained" onClick={() => handleClose(section, index)} style={{
+                backgroundColor: '#f5f5f5',
+                borderRadius: '15%',
+                padding: 5,
+                color: 'black',
+                marginRight: '10px'
+              }}>
+                <Icon icon="ic:baseline-close" width="24" height="24"  />
+              </IconButton>
+            </div>
           </div>
+
 
         )}
         {component.type === COMPONENT_TYPES.TWO_COLUMN && (
           <Box
-          key={component.id}
-          display="flex"
-          justifyContent="space-between"
-          style={{ minHeight: '200px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px' }}
-        >
-          {(component.columns || [[], []]).map((column, colIndex) => (
+            key={component.id}
+            display="flex"
+            justifyContent="space-between"
+            style={{ minHeight: '200px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px' }}
+          >
+            {(component.columns || [[], []]).map((column, colIndex) => (
+              <Box
+                key={`${component.id}-col-${colIndex}`}
+                flex={1}
+                p={1}
+                border={1}
+                borderColor="grey.300"
+                borderRadius={2}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDrop(e, section, index, colIndex);
+                }}
+                style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}
+              >
+                {(column || []).map((nestedComponent, nestedIndex) =>
+                  renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
+                )}
+              </Box>
+            ))}
+          </Box>
+        )}
+        {component.type === COMPONENT_TYPES.ONE_COLUMN && (
+          <Box
+            key={component.id}
+            style={{ border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px', padding: '10px' }}
+          >
             <Box
-              key={`${component.id}-col-${colIndex}`}
-              flex={1}
-              p={1}
-              border={1}
-              borderColor="grey.300"
-              borderRadius={2}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -574,39 +629,15 @@ const DragDropEditor = () => {
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onDrop(e, section, index, colIndex);
+                onDrop(e, section, index, 0);
               }}
-              style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}
+              style={{ minHeight: '100px' }}
             >
-              {(column || []).map((nestedComponent, nestedIndex) =>
-                renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
+              {(component.content || []).map((nestedComponent, nestedIndex) =>
+                renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
               )}
             </Box>
-          ))}
-        </Box>
-        )}
-        {component.type === COMPONENT_TYPES.ONE_COLUMN && (
-          <Box
-          key={component.id}
-          style={{ border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px', padding: '10px' }}
-        >
-          <Box
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDrop(e, section, index, 0);
-            }}
-            style={{ minHeight: '100px' }}
-          >
-            {(component.content || []).map((nestedComponent, nestedIndex) =>
-              renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
-            )}
           </Box>
-        </Box>
         )}
       </div>
     );

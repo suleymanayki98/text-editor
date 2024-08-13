@@ -218,7 +218,7 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
                   textTransform: 'capitalize',
                 }}
               >
-                <Icon icon="mdi:newspaper-variant-outline" width="40" height="40" style={{ color: 'grey' }} />
+                <Icon icon="icon-park-outline:h1" width="40" height="40" style={{ color: 'grey' }} />
                 <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
                   H1
                 </Typography>
@@ -241,7 +241,7 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
                   textTransform: 'capitalize',
                 }}
               >
-                <Icon icon="mdi:newspaper-variant-outline" width="40" height="40" style={{ color: 'grey' }} />
+                <Icon icon="icon-park-outline:h2" width="40" height="40" style={{ color: 'grey' }} />
                 <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
                   H2
                 </Typography>

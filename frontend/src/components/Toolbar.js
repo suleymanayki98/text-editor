@@ -42,13 +42,13 @@ const Toolbar = ({
           <Icon icon="lucide:redo" width="24" height="24" />
         </IconButton>
         <IconButton size="small" variant="contained"  onClick={() => setShowSource(!showSource)} style={{
-          backgroundColor: '#f5f5f5',
-          borderRadius: '15%', 
+          backgroundColor: showSource ? '#1976d2' : '#f5f5f5',
+          borderRadius: '10px', 
           padding: 10, 
-          color: 'black',
+          color: showSource ? 'white' : 'black',
           marginLeft: '10px'
         }}>
-          {showSource ? 'Text View' : 'Code View'}
+          {showSource ? 'Exit Code View' : 'Code View'}
         </IconButton>
       </Box>
     </Box>

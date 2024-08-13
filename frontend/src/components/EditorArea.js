@@ -1,6 +1,6 @@
 // EditorArea.js
 import React from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ComponentRenderer from './ComponentRenderer';
 import SourceCodeEditor from './SourceCodeEditor';
@@ -38,8 +38,6 @@ const EditorArea = ({
           <Icon icon="ic:baseline-close" width="24" height="24" />
         </IconButton>
         <Box flex={2} mr={2}>
-          <Typography variant="h6" mb={2}>Description</Typography>
-          <hr style={{ marginTop: '10px', border: 'none', borderTop: '2px solid #ddd' }} />
           {!showSource ? (
             <ComponentRenderer
               components={components.description}
@@ -52,24 +50,6 @@ const EditorArea = ({
             <SourceCodeEditor
               value={sourceCode.description}
               onChange={(e) => handleSourceCodeChange('description', e)}
-            />
-          )}
-        </Box>
-        <Box flex={1}>
-          <Typography variant="h6" mb={2}>About</Typography>
-          <hr style={{ marginTop: '10px', border: 'none', borderTop: '2px solid #ddd' }} />
-          {!showSource ? (
-            <ComponentRenderer
-              components={components.about}
-              section="about"
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-              renderComponent={renderComponent}
-            />
-          ) : (
-            <SourceCodeEditor
-              value={sourceCode.about}
-              onChange={(e) => handleSourceCodeChange('about', e)}
             />
           )}
         </Box>
