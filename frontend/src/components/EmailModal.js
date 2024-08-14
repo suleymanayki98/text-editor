@@ -23,9 +23,9 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
     <Button
       onClick={onClick}
       style={{
-        width: selected ? 35 : 30,
-        height: selected ? 35 : 30,
-        minWidth: 30,
+        width: selected ? 23 : 20,
+        height: selected ? 23 : 20,
+        minWidth: 20,
         borderRadius: '50%',
         backgroundColor: color,
         margin: 5,
@@ -132,7 +132,7 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
             ))}
           </Box>
         </Box>
-        <Box display="flex" justifyContent="flex-end" style={{ flexGrow: 1, marginTop: '25px', textTransform: 'capitalize', }}>
+        <Box display="flex" justifyContent="flex-end" style={{ flexGrow: 1, marginTop: '10px', textTransform: 'capitalize', }}>
           <Button variant="outlined" onClick={onClose}>Close</Button>
           <Button style={{
             marginLeft: '15px',
