@@ -1,5 +1,5 @@
 // EditorArea.js
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Box, IconButton, Typography } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ComponentRenderer from './ComponentRenderer';
@@ -13,8 +13,18 @@ const EditorArea = ({
   onDragOver,
   onDrop,
   renderComponent,
-  clearEditor
+  clearEditor,
+  setEditorBounds
 }) => {
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      const bounds = editorRef.current.getBoundingClientRect();
+      setEditorBounds(bounds);
+    }
+  }, [setEditorBounds]);
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sourceCode.description).then(() => {
       console.log('Source code copied to clipboard!');
@@ -24,6 +34,7 @@ const EditorArea = ({
   return (
     <Box display="flex" mb={2}>
       <Box
+        ref={editorRef}
         flex={2}
         p={2}
         border={1}
@@ -32,6 +43,7 @@ const EditorArea = ({
         display="flex"
         flexDirection="column"
         position="relative"
+        onDragOver={onDragOver}
       >
         {!showSource && (
           <IconButton

@@ -30,10 +30,36 @@ const DragDropEditor = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [emailData, setEmailData] = useState({});
   const [currentEmailData, setCurrentEmailData] = useState({});
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showHr, setShowHr] = useState(false);
+  const [draggableArea, setDraggableArea] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [editorBounds, setEditorBounds] = useState(null);
+  const [activeColumn, setActiveColumn] = useState(null);
 
   useEffect(() => {
     loadComponents();
     loadEmailData();
+  }, []);
+
+  useEffect(() => {
+    const editorElement = document.getElementById('editor-area');
+    if (editorElement) {
+      const bounds = editorElement.getBoundingClientRect();
+      setEditorBounds(bounds);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      setMousePosition({ x: event.clientX, y: event.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
   const handleClose = (section, index) => {
@@ -59,6 +85,8 @@ const DragDropEditor = () => {
   const onDragStart = (e, section, index, columnIndex) => {
     setDraggingIndex({ section, index, columnIndex });
     e.dataTransfer.setData('text/plain', JSON.stringify({ section, index, columnIndex }));
+    setIsDragging(true);
+    setShowHr(true);
   };
 
   const loadComponents = async () => {
@@ -66,12 +94,12 @@ const DragDropEditor = () => {
       const loadedSourceCode = await BackendService.loadComponentsFromJson();
       setSourceCode({
         description: loadedSourceCode,
-        about: sourceCode.about // Mevcut about source code'unu koruyoruz
+        about: sourceCode.about
       });
       const parsedComponents = parseComponents(loadedSourceCode, 'description');
       setComponents({
         description: parsedComponents,
-        about: components.about // Mevcut about bileşenlerini koruyoruz
+        about: components.about
       });
     } catch (error) {
       console.error('Error loading components:', error);
@@ -221,10 +249,55 @@ const DragDropEditor = () => {
   };
   const onDragOver = (e) => {
     e.preventDefault();
+    setShowHr(true);
+    setMousePosition({ x: e.clientX, y: e.clientY });
+  };
+  const DragIndicator = ({ mousePosition, show, editorBounds, isDragging, activeColumn }) => {
+    if (!show || !editorBounds || !isDragging) return null;
+
+    const isWithinEditor =
+      mousePosition.y >= editorBounds.top &&
+      mousePosition.y <= editorBounds.bottom &&
+      mousePosition.x >= editorBounds.left &&
+      mousePosition.x <= editorBounds.right;
+
+    if (!isWithinEditor) return null;
+
+    let indicatorLeft = mousePosition.x - 20;
+    let indicatorWidth = '250px';
+
+    if (activeColumn) {
+      indicatorLeft = activeColumn.left;
+      indicatorWidth = `${activeColumn.width}px`;
+    }
+
+    return (
+      <hr
+        style={{
+          position: 'fixed',
+          left: indicatorLeft,
+          width: indicatorWidth,
+          top: mousePosition.y,
+          border: 'none',
+          height: '4px',
+          background: '#1976d2',
+          pointerEvents: 'none',
+          zIndex: 9999,
+        }}
+      />
+    );
+  };
+
+
+  const onDragEnd = () => {
+    setShowHr(false);
+    setIsDragging(false);
   };
 
   const onDrop = (e, targetSection, targetIndex, targetColumnIndex) => {
     e.preventDefault();
+    setShowHr(false);
+    setIsDragging(false);
     const type = e.dataTransfer.getData('type');
     const id = e.dataTransfer.getData('id');
 
@@ -256,7 +329,7 @@ const DragDropEditor = () => {
           }
 
           if (!current[indices[i]]) {
-            current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
+            current[indices[i]] = { type: COMPONENT_TYPES.f, columns: [[], []] };
           }
 
           if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
@@ -398,8 +471,23 @@ const DragDropEditor = () => {
           border: isDragging ? '1px dashed #000' : 'none',
           padding: '8px',
         }}
-        onDragStart={(e) => onDragStart(e, section, index, columnIndex)}
-        onDragOver={onDragOver}
+        onDragStart={(e) => {
+          onDragStart(e, section, index, columnIndex);
+          setShowHr(true);
+        }}
+        onDragEnd={onDragEnd}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const rect = e.currentTarget.getBoundingClientRect();
+          setDraggableArea(rect);
+          onDragOver(e, section, index, columnIndex);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDraggableArea(null);
+        }}
         onDrop={(e) => {
           e.stopPropagation();
           onDrop(e, section, index, columnIndex);
@@ -610,11 +698,26 @@ const DragDropEditor = () => {
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  const columnRect = e.currentTarget.getBoundingClientRect();
+                  setActiveColumn({
+                    left: columnRect.left,
+                    width: columnRect.width,
+                  });
+                  setShowHr(true);
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveColumn(null);
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   onDrop(e, section, index, colIndex);
+                  setActiveColumn(null);
+                  setShowHr(false);
+                  setIsDragging(false);
                 }}
                 style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}
               >
@@ -676,6 +779,7 @@ const DragDropEditor = () => {
           onDrop={onDrop}
           renderComponent={renderComponent}
           clearEditor={clearEditor}
+          setEditorBounds={setEditorBounds}
         />
       </Box>
 
@@ -693,6 +797,13 @@ const DragDropEditor = () => {
         currentEmailData={currentEmailData}
         onSave={handleSaveEmailData}
         onChange={handleEmailDataChange}
+      />
+      <DragIndicator
+        mousePosition={mousePosition}
+        show={showHr}
+        editorBounds={editorBounds}
+        isDragging={isDragging}
+        activeColumn={activeColumn}
       />
     </Container>
   );
