@@ -35,7 +35,7 @@ const DragDropEditor = () => {
     loadComponents();
     loadEmailData();
   }, []);
-  
+
   const handleClose = (section, index) => {
     const newComponents = JSON.parse(JSON.stringify(components));
     newComponents[section] = newComponents[section].filter((_, i) => i !== index);
@@ -46,9 +46,10 @@ const DragDropEditor = () => {
     setUndoStack([...undoStack, components]);
     setRedoStack([]);
     setComponents(newComponents);
-    updateSourceCode(newComponents);
-    BackendService.saveComponentsToJson(newComponents);
+    const newSourceCode = updateSourceCode(newComponents);
+    BackendService.saveComponentsToJson(newSourceCode.description);
   };
+
   const clearEditor = () => {
     setComponents({ description: [], about: [] });
     setSourceCode({ description: '', about: '' });
@@ -62,9 +63,16 @@ const DragDropEditor = () => {
 
   const loadComponents = async () => {
     try {
-      const loadedComponents = await BackendService.loadComponentsFromJson();
-      setComponents(loadedComponents);
-      updateSourceCode(loadedComponents);
+      const loadedSourceCode = await BackendService.loadComponentsFromJson();
+      setSourceCode({
+        description: loadedSourceCode,
+        about: sourceCode.about // Mevcut about source code'unu koruyoruz
+      });
+      const parsedComponents = parseComponents(loadedSourceCode, 'description');
+      setComponents({
+        description: parsedComponents,
+        about: components.about // Mevcut about bileşenlerini koruyoruz
+      });
     } catch (error) {
       console.error('Error loading components:', error);
     }
@@ -209,6 +217,7 @@ const DragDropEditor = () => {
     };
 
     setSourceCode(newSourceCode);
+    return newSourceCode;
   };
   const onDragOver = (e) => {
     e.preventDefault();
@@ -567,7 +576,7 @@ const DragDropEditor = () => {
                 color: 'black',
                 marginLeft: '10px'
               }}>
-                <Icon icon="fluent:edit-28-filled" width="24" height="24"  />
+                <Icon icon="fluent:edit-28-filled" width="24" height="24" />
               </IconButton>
               <IconButton size="small" variant="contained" onClick={() => handleClose(section, index)} style={{
                 backgroundColor: '#f5f5f5',
@@ -576,7 +585,7 @@ const DragDropEditor = () => {
                 color: 'black',
                 marginRight: '10px'
               }}>
-                <Icon icon="ic:baseline-close" width="24" height="24"  />
+                <Icon icon="ic:baseline-close" width="24" height="24" />
               </IconButton>
             </div>
           </div>

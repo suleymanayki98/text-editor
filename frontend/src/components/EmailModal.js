@@ -23,9 +23,9 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
     <Button
       onClick={onClick}
       style={{
-        width: selected ? 45 : 40,
-        height: selected ? 45 : 40,
-        minWidth: 40,
+        width: selected ? 35 : 30,
+        height: selected ? 35 : 30,
+        minWidth: 30,
         borderRadius: '50%',
         backgroundColor: color,
         margin: 5,

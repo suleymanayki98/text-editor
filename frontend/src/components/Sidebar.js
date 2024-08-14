@@ -7,29 +7,11 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
   const sidebarRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [draggingButton, setDraggingButton] = useState(null);
 
-  // ... (handleMouseDown, handleMouseMove, handleMouseUp functions)
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  
   const handleMouseUp = () => {
     setIsDragging(false);
   };
-
 
   const handleMouseDown = (e) => {
     if (e.target.classList.contains('handle')) {
@@ -50,6 +32,30 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
     }
   };
 
+  const handleDragStart = (type) => (e) => {
+    e.dataTransfer.setData('type', type);
+    e.dataTransfer.setData('id', Date.now().toString());
+    setDraggingButton(type);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingButton(null);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   return (
     <Box
@@ -66,190 +72,164 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
         overflowY: 'auto',
       }}
     >
-      {/* Sidebar content */}
-      {toggleSidebar && (
-        <Box
-          ref={sidebarRef}
-          onMouseDown={handleMouseDown}
+      <Box className="handle" p={2} bgcolor="grey.100" style={{ cursor: 'move', position: 'relative' }}>
+        <hr style={{ marginTop: '-5px', width: '120px', border: 'none', borderTop: '4px solid #ddd' }} />
+        <Typography variant="h7"><strong>Add Element</strong></Typography>
+        <IconButton
+          aria-label="close"
+          onClick={toggleSidebar}
           style={{
-            position: 'fixed',
-            left: sidebarPosition.x,
-            top: sidebarPosition.y,
-            width: '350px',
-            backgroundColor: '#f5f5f5',
-            boxShadow: '0px 0px 15px rgba(0, 0, 0, 0.1)',
-            zIndex: 1000,
-            overflowY: 'auto',
+            position: 'absolute',
+            right: 8,
+            top: 12,
           }}
         >
-          <Box className="handle" p={2} bgcolor="grey.100" style={{ cursor: 'move', position: 'relative' }}>
-            <hr style={{ marginTop: '-5px', width: '120px', border: 'none', borderTop: '4px solid #ddd' }} />
-            <Typography variant="h7"><strong>Add Element</strong></Typography>
-            <IconButton
-              aria-label="close"
-              onClick={toggleSidebar}
-              style={{
-                position: 'absolute',
-                right: 8,
-                top: 12,
-              }}
-            >
-              <Icon icon="ic:baseline-close" width="24" height="24" />
-            </IconButton>
-          </Box>
-          <Box p={2}>
-            <Typography variant="body2" style={{ fontSize: '18px', color: 'black', marginBottom: '10px', marginTop: '10px' }}>
-              Basics
-            </Typography>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <Button
-                variant="outlined"
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('type', COMPONENT_TYPES.PARAGRAPH);
-                  e.dataTransfer.setData('id', Date.now().toString());
-                }}
-                draggable
-                style={{
-                  backgroundColor: 'white',
-                  borderColor: '#ebebeb',
-                  width: '48%', // Butonların genişliği %48
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textTransform: 'capitalize',
-                }}
-              >
-                <Icon icon="mdi:text" width="40" height="40" style={{ color: 'grey' }} />
-                <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
-                  Text
-                </Typography>
-              </Button>
-
-              <Button
-                variant="outlined"
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('type', COMPONENT_TYPES.BUTTON);
-                  e.dataTransfer.setData('id', Date.now().toString());
-                }}
-                draggable
-                style={{
-                  backgroundColor: 'white',
-                  borderColor: '#ebebeb',
-                  width: '48%', // Butonların genişliği %48
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textTransform: 'capitalize',
-                }}
-              >
-                <Icon icon="fluent:button-16-regular" width="40" height="" style={{ color: 'grey' }} />
-                <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
-                  Button
-                </Typography>
-              </Button>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-
-              <Button
-                variant="outlined"
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('type', COMPONENT_TYPES.TWO_COLUMN);
-                  e.dataTransfer.setData('id', Date.now().toString());
-                }}
-                draggable
-                style={{
-                  backgroundColor: 'white',
-                  borderColor: '#ebebeb',
-                  width: '48%', // Butonların genişliği %48
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textTransform: 'capitalize',
-                }}
-              >
-                <Icon icon="mingcute:columns-2-line" width="40" height="40" style={{ color: 'grey' }} />
-                <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
-                  2 Column
-                </Typography>
-              </Button>
-
-              <Button
-                variant="outlined"
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('type', COMPONENT_TYPES.ONE_COLUMN);
-                  e.dataTransfer.setData('id', Date.now().toString());
-                }}
-                draggable
-                style={{
-                  backgroundColor: 'white',
-                  borderColor: '#ebebeb',
-                  width: '48%', // Butonların genişliği %48
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textTransform: 'capitalize',
-                }}
-              >
-                <Icon icon="akar-icons:square" width="40" height="40" style={{ color: 'grey' }} />
-                <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
-                  1 Column
-                </Typography>
-              </Button>
-            </div>
-            <Typography variant="body2" style={{ fontSize: '18px', color: 'black', marginBottom: '10px', marginTop: '10px' }}>
+          <Icon icon="ic:baseline-close" width="24" height="24" />
+        </IconButton>
+      </Box>
+      <Box p={2}>
+        <Typography variant="body2" style={{ fontSize: '18px', color: 'black', marginBottom: '10px', marginTop: '10px' }}>
+          Basics
+        </Typography>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <Button
+            variant="outlined"
+            onDragStart={handleDragStart(COMPONENT_TYPES.PARAGRAPH)}
+            onDragEnd={handleDragEnd}
+            draggable
+            style={{
+              backgroundColor: 'white',
+              borderColor: draggingButton === COMPONENT_TYPES.PARAGRAPH ? 'rgb(25, 118, 210)' : '#ebebeb',
+              borderWidth: draggingButton === COMPONENT_TYPES.PARAGRAPH ? '2px' : '1px',
+              width: '48%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textTransform: 'capitalize',
+            }}
+          >
+            <Icon icon="mdi:text" width="40" height="40" style={{ color: 'grey' }} />
+            <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
               Text
             </Typography>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          </Button>
 
-              <Button
-                variant="outlined"
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('type', COMPONENT_TYPES.H1);
-                  e.dataTransfer.setData('id', Date.now().toString());
-                }}
-                draggable
-                style={{
-                  backgroundColor: 'white',
-                  borderColor: '#ebebeb',
-                  width: '48%', // Butonların genişliği %48
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textTransform: 'capitalize',
-                }}
-              >
-                <Icon icon="icon-park-outline:h1" width="40" height="40" style={{ color: 'grey' }} />
-                <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
-                  H1
-                </Typography>
-              </Button>
+          <Button
+            variant="outlined"
+            onDragStart={handleDragStart(COMPONENT_TYPES.BUTTON)}
+            onDragEnd={handleDragEnd}
+            draggable
+            style={{
+              backgroundColor: 'white',
+              borderColor: draggingButton === COMPONENT_TYPES.BUTTON ? 'rgb(25, 118, 210)' : '#ebebeb',
+              borderWidth: draggingButton === COMPONENT_TYPES.BUTTON ? '2px' : '1px',
+              width: '48%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textTransform: 'capitalize',
+            }}
+          >
+            <Icon icon="fluent:button-16-regular" width="40" height="" style={{ color: 'grey' }} />
+            <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
+              Button
+            </Typography>
+          </Button>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <Button
+            variant="outlined"
+            onDragStart={handleDragStart(COMPONENT_TYPES.TWO_COLUMN)}
+            onDragEnd={handleDragEnd}
+            draggable
+            style={{
+              backgroundColor: 'white',
+              borderColor: draggingButton === COMPONENT_TYPES.TWO_COLUMN ? 'rgb(25, 118, 210)' : '#ebebeb',
+              borderWidth: draggingButton === COMPONENT_TYPES.TWO_COLUMN ? '2px' : '1px',
+              width: '48%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textTransform: 'capitalize',
+            }}
+          >
+            <Icon icon="mingcute:columns-2-line" width="40" height="40" style={{ color: 'grey' }} />
+            <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
+              2 Column
+            </Typography>
+          </Button>
 
-              <Button
-                variant="outlined"
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('type', COMPONENT_TYPES.H2);
-                  e.dataTransfer.setData('id', Date.now().toString());
-                }}
-                draggable
-                style={{
-                  backgroundColor: 'white',
-                  borderColor: '#ebebeb',
-                  width: '48%', // Butonların genişliği %48
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textTransform: 'capitalize',
-                }}
-              >
-                <Icon icon="icon-park-outline:h2" width="40" height="40" style={{ color: 'grey' }} />
-                <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
-                  H2
-                </Typography>
-              </Button>
-            </div>
-          </Box>
-        </Box>
-      )}
+          <Button
+            variant="outlined"
+            onDragStart={handleDragStart(COMPONENT_TYPES.ONE_COLUMN)}
+            onDragEnd={handleDragEnd}
+            draggable
+            style={{
+              backgroundColor: 'white',
+              borderColor: draggingButton === COMPONENT_TYPES.ONE_COLUMN ? 'rgb(25, 118, 210)' : '#ebebeb',
+              borderWidth: draggingButton === COMPONENT_TYPES.ONE_COLUMN ? '2px' : '1px',
+              width: '48%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textTransform: 'capitalize',
+            }}
+          >
+            <Icon icon="akar-icons:square" width="40" height="40" style={{ color: 'grey' }} />
+            <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
+              1 Column
+            </Typography>
+          </Button>
+        </div>
+        <Typography variant="body2" style={{ fontSize: '18px', color: 'black', marginBottom: '10px', marginTop: '10px' }}>
+          Text
+        </Typography>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <Button
+            variant="outlined"
+            onDragStart={handleDragStart(COMPONENT_TYPES.H1)}
+            onDragEnd={handleDragEnd}
+            draggable
+            style={{
+              backgroundColor: 'white',
+              borderColor: draggingButton === COMPONENT_TYPES.H1 ? 'rgb(25, 118, 210)' : '#ebebeb',
+              borderWidth: draggingButton === COMPONENT_TYPES.H1 ? '2px' : '1px',
+              width: '48%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textTransform: 'capitalize',
+            }}
+          >
+            <Icon icon="icon-park-outline:h1" width="40" height="40" style={{ color: 'grey' }} />
+            <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
+              H1
+            </Typography>
+          </Button>
+
+          <Button
+            variant="outlined"
+            onDragStart={handleDragStart(COMPONENT_TYPES.H2)}
+            onDragEnd={handleDragEnd}
+            draggable
+            style={{
+              backgroundColor: 'white',
+              borderColor: draggingButton === COMPONENT_TYPES.H2 ? 'rgb(25, 118, 210)' : '#ebebeb',
+              borderWidth: draggingButton === COMPONENT_TYPES.H2 ? '2px' : '1px',
+              width: '48%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textTransform: 'capitalize',
+            }}
+          >
+            <Icon icon="icon-park-outline:h2" width="40" height="40" style={{ color: 'grey' }} />
+            <Typography variant="body2" style={{ color: 'black', textAlign: 'center', marginTop: '10px' }}>
+              H2
+            </Typography>
+          </Button>
+        </div>
+      </Box>
     </Box>
   );
 };
