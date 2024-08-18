@@ -36,6 +36,12 @@ const DragDropEditor = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [editorBounds, setEditorBounds] = useState(null);
   const [activeColumn, setActiveColumn] = useState(null);
+  const [hrPosition, setHrPosition] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const iconStyle = (hover) => ({
+    color: hover ? '#015FFB' : 'black',
+  });
 
   useEffect(() => {
     loadComponents();
@@ -353,10 +359,10 @@ const DragDropEditor = () => {
         newComponent.text = "I'am a text. Click here to add your own text and edit me. It's easy";
       }
       if (type === COMPONENT_TYPES.H1) {
-        newComponent.text = 'Heading';
+        newComponent.text = 'Heading1';
       }
       if (type === COMPONENT_TYPES.H2) {
-        newComponent.text = 'Heading';
+        newComponent.text = 'Heading2';
       }
       if (type === COMPONENT_TYPES.TWO_COLUMN) {
         newComponent.columns = [[], []];
@@ -396,8 +402,24 @@ const DragDropEditor = () => {
 
     updateComponents(newComponents);
     setDraggingIndex(null);
+    resetStyles();
   };
-
+  const resetStyles = () => {
+    const h1Elements = document.querySelectorAll('h1');
+    h1Elements.forEach(el => {
+      el.style.fontSize = '2em';
+      el.style.fontWeight = 'bold';
+      el.style.lineHeight = 'normal';
+      el.style.margin = '0';
+    });
+    const h2Elements = document.querySelectorAll('h2');
+    h2Elements.forEach(el => {
+      el.style.fontSize = '1.5em';
+      el.style.fontWeight = 'bold';
+      el.style.lineHeight = 'normal';
+      el.style.margin = '0';
+    });
+  };
   const undo = () => {
     if (undoStack.length === 0) return;
     const previousComponents = undoStack.pop();
@@ -537,88 +559,90 @@ const DragDropEditor = () => {
         )}
         {component.type === COMPONENT_TYPES.H1 && (
           <div style={{ position: 'relative' }}>
-            <Typography
-              variant="h1"
-              onClick={() => setEditingIndex({ section, index, columnIndex })}
-              style={{
-                padding: '4px',
-                border: 'none',
-                boxShadow: 'none',
-                whiteSpace: 'pre-wrap',
-                visibility: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible',
-              }}
-            >
-              <p>{component.text || 'Heading 1'}</p>
-            </Typography>
-            {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex && (
-              <TextField
-                fullWidth
-                value={component.text || ''}
-                onChange={(e) => handleTextChange(e, section, index, columnIndex)}
-                onBlur={() => setEditingIndex({ section: null, index: null, columnIndex: null })}
-                autoFocus
+            {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? (
+              <div
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  handleTextChange({ target: { value: e.target.innerText } }, section, index, columnIndex);
+                  setEditingIndex({ section: null, index: null, columnIndex: null });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
+                  }
+                }}
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'transparent',
+                  fontSize: '2em',
+                  fontWeight: 'bold',
+                  lineHeight: 'normal',
+                  margin: 0,
+                  padding: '4px',
+                  outline: 'none',
+                  border: '1px solid #ccc',
+                }}
+              >
+                {component.text || 'Heading 1'}
+              </div>
+            ) : (
+              <h1
+                onClick={() => setEditingIndex({ section, index, columnIndex })}
+                style={{
+                  padding: '4px',
+                  margin: 0,
                   border: 'none',
+                  boxShadow: 'none',
+                  whiteSpace: 'pre-wrap',
                 }}
-                InputProps={{
-                  style: {
-                    backgroundColor: 'transparent',
-                    fontSize: '2em', // h1 boyutuna eşdeğer yapıyor
-                    fontWeight: 'bold',
-                    lineHeight: 'normal',
-                    margin: 0,
-                  },
-                }}
-              />
+              >
+                {component.text || 'Heading 1'}
+              </h1>
             )}
           </div>
         )}
 
         {component.type === COMPONENT_TYPES.H2 && (
           <div style={{ position: 'relative' }}>
-            <Typography
-              variant="h2"
-              onClick={() => setEditingIndex({ section, index, columnIndex })}
-              style={{
-                padding: '4px',
-                border: 'none',
-                boxShadow: 'none',
-                whiteSpace: 'pre-wrap',
-                visibility: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible',
-              }}
-            >
-              {component.text || 'Heading 2'}
-            </Typography>
-            {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex && (
-              <TextField
-                fullWidth
-                value={component.text || ''}
-                onChange={(e) => handleTextChange(e, section, index, columnIndex)}
-                onBlur={() => setEditingIndex({ section: null, index: null, columnIndex: null })}
-                autoFocus
+            {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? (
+              <div
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  handleTextChange({ target: { value: e.target.innerText } }, section, index, columnIndex);
+                  setEditingIndex({ section: null, index: null, columnIndex: null });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
+                  }
+                }}
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'transparent',
+                  fontSize: '1.5em',
+                  fontWeight: 'bold',
+                  lineHeight: 'normal',
+                  margin: 0,
+                  padding: '4px',
+                  outline: 'none',
+                  border: '1px solid #ccc',
+                }}
+              >
+                {component.text || 'Heading 2'}
+              </div>
+            ) : (
+              <h2
+                onClick={() => setEditingIndex({ section, index, columnIndex })}
+                style={{
+                  padding: '4px',
+                  margin: 0,
                   border: 'none',
+                  boxShadow: 'none',
+                  whiteSpace: 'pre-wrap',
                 }}
-                InputProps={{
-                  style: {
-                    backgroundColor: 'transparent',
-                    fontSize: '1.5em',
-                    fontWeight: 'bold',
-                  },
-                }}
-              />
+              >
+                {component.text || 'Heading 2'}
+              </h2>
             )}
           </div>
         )}
@@ -645,35 +669,60 @@ const DragDropEditor = () => {
               }}
             >
               <IconButton size="small" variant="contained" style={{
-                backgroundColor: '#f5f5f5',
-                borderRadius: '10%',
-                padding: 10,
+                backgroundColor: '#ffffff',
+                borderRadius: '4px',
+                padding: '6px',
+                height: '30px',
+                width: '30px',
                 color: 'black',
-                marginRight: '15px',
+                border: '0.75px solid #919EAB52',
+                marginRight: '10px',
               }}>
                 <Icon icon="mdi:plus" width="24" height="24" />
               </IconButton>
-              {emailData[section]?.[index]?.buttonText || component.text || 'Contact me'}
+              <Typography style={{
+                fontSize: '14px',
+                color: '#002E47',
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 400,
+                lineHeight: '22px',
+              }}> {emailData[section]?.[index]?.buttonText || component.text || 'Contact me'}</Typography>
+
             </Button>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <IconButton size="small" variant="contained" onClick={() => handleOpenModal(section, index)} style={{
-                backgroundColor: '#f5f5f5',
-                borderRadius: '15%',
-                padding: 10,
-                color: 'black',
-                marginLeft: '10px'
-              }}>
-                <Icon icon="fluent:edit-28-filled" width="24" height="24" />
-              </IconButton>
-              <IconButton size="small" variant="contained" onClick={() => handleClose(section, index)} style={{
-                backgroundColor: '#f5f5f5',
-                borderRadius: '15%',
-                padding: 5,
-                color: 'black',
-                marginRight: '10px'
-              }}>
-                <Icon icon="ic:baseline-close" width="24" height="24" />
+            <div style={{ display: 'flex' }}>
+              <IconButton
+                size="small"
+                variant="contained"
+                style={{
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: '4px',
+                  width: '56px',
+                  height: '28px',
+                  padding: '4px',
+                  gap: '8px',
+                  color: 'black',
+                  marginRight: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Icon
+                  onClick={() => handleOpenModal(section, index)}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
+                  style={iconStyle(isHovered)}
+                  icon="fluent:edit-32-filled"
+                  width="18"
+                  height="18"
+                />
+                <Icon
+                  onClick={() => handleClose(section, index)}
+                  icon="ic:baseline-close"
+                  width="20"
+                  height="20"
+                />
               </IconButton>
             </div>
           </div>
@@ -685,7 +734,7 @@ const DragDropEditor = () => {
             key={component.id}
             display="flex"
             justifyContent="space-between"
-            style={{ minHeight: '200px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px' }}
+            style={{ minHeight: '200px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px', position: 'relative' }}
           >
             {(component.columns || [[], []]).map((column, colIndex) => (
               <Box
@@ -735,16 +784,16 @@ const DragDropEditor = () => {
           >
             <Box
               onDragOver={(e) => {
-                e.preventDefault();
+              e.preventDefault();
                 e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
                 e.stopPropagation();
                 onDrop(e, section, index, 0);
-              }}
+            }}
               style={{ minHeight: '100px' }}
-            >
+          >
               {(component.content || []).map((nestedComponent, nestedIndex) =>
                 renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
               )}
