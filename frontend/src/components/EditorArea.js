@@ -74,18 +74,28 @@ const EditorArea = ({
           ) : (
             <Box>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography variant="subtitle1">Code</Typography>
+                <Typography style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  lineHeight: '25.2px',
+                  textAlign: 'left',
+                  marginLeft: '15px',
+                  width: '36px',
+                  height: '25px'
+                }} variant="subtitle1">Code</Typography>
                 <IconButton
                   size="small"
                   onClick={copyToClipboard}
                 >
                   <Icon
                     icon="mdi:content-copy"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                   />
                 </IconButton>
               </Box>
+              <hr style={{ border: 'none', borderTop: '1px solid #ddd', marginBottom: '20px' }} />
               <SourceCodeEditor
                 value={sourceCode.description}
                 onChange={(e) => handleSourceCodeChange('description', e)}

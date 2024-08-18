@@ -1,10 +1,1 @@
-{
-  "description": [
-    {
-      "type": "paragraph",
-      "id": "1723025253170",
-      "text": "This is a new paragraph"
-    }
-  ],
-  "about": []
-}
+"<div class=\"two-column-layout\">\n              <div class=\"column\"><p>I'am a text. Click here to add your own text and edit me. It's easy</p>\n<div class=\"two-column-layout\">\n              <div class=\"column\"></div>\n              <div class=\"column\"></div>\n            </div></div>\n              <div class=\"column\"></div>\n            </div>"

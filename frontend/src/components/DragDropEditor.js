@@ -36,7 +36,6 @@ const DragDropEditor = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [editorBounds, setEditorBounds] = useState(null);
   const [activeColumn, setActiveColumn] = useState(null);
-  const [hrPosition, setHrPosition] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
   const iconStyle = (hover) => ({
@@ -60,9 +59,9 @@ const DragDropEditor = () => {
     const handleMouseMove = (event) => {
       setMousePosition({ x: event.clientX, y: event.clientY });
     };
-
+  
     window.addEventListener('mousemove', handleMouseMove);
-
+  
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
@@ -83,10 +82,27 @@ const DragDropEditor = () => {
   };
 
   const clearEditor = () => {
-    setComponents({ description: [], about: [] });
-    setSourceCode({ description: '', about: '' });
+    // Bileşenleri boşalt
+    setComponents({
+      description: [],
+      about: []
+    });
+  
+    // Kaynak kodunu boşalt
+    setSourceCode({
+      description: '',
+      about: ''
+    });
+  
+    // Geri alma ve ileri alma yığınlarını temizle
     setUndoStack([]);
     setRedoStack([]);
+  
+    // Düzenleme indeksini sıfırla
+    setEditingIndex({ section: null, index: null, columnIndex: null });
+  
+    // Kaydedilen JSON'ı da temizle
+    BackendService.saveComponentsToJson('');
   };
   const onDragStart = (e, section, index, columnIndex) => {
     setDraggingIndex({ section, index, columnIndex });
@@ -260,35 +276,40 @@ const DragDropEditor = () => {
   };
   const DragIndicator = ({ mousePosition, show, editorBounds, isDragging, activeColumn }) => {
     if (!show || !editorBounds || !isDragging) return null;
-
+  
     const isWithinEditor =
       mousePosition.y >= editorBounds.top &&
       mousePosition.y <= editorBounds.bottom &&
       mousePosition.x >= editorBounds.left &&
       mousePosition.x <= editorBounds.right;
-
+  
     if (!isWithinEditor) return null;
-
-    let indicatorLeft = mousePosition.x - 20;
-    let indicatorWidth = '250px';
-
+  
+    let indicatorLeft = mousePosition.x;
+    let indicatorTop = mousePosition.y;
+    let indicatorWidth = '400px';
+    let indicatorHeight = '4px';
+  
     if (activeColumn) {
-      indicatorLeft = activeColumn.left;
-      indicatorWidth = `${activeColumn.width}px`;
+      indicatorLeft = Math.max(activeColumn.left, Math.min(mousePosition.x, activeColumn.left + activeColumn.width - parseFloat(indicatorWidth)));
+      indicatorTop = mousePosition.y;
+      if (indicatorLeft + parseFloat(indicatorWidth) > activeColumn.left + activeColumn.width) {
+        indicatorWidth = `${activeColumn.left + activeColumn.width - indicatorLeft}px`;
+      }
     }
-
+  
     return (
-      <hr
+      <div
         style={{
           position: 'fixed',
           left: indicatorLeft,
+          top: indicatorTop,
           width: indicatorWidth,
-          top: mousePosition.y,
-          border: 'none',
-          height: '4px',
+          height: indicatorHeight,
           background: '#1976d2',
           pointerEvents: 'none',
           zIndex: 9999,
+          transition: 'all 0.05s linear',
         }}
       />
     );
@@ -750,8 +771,11 @@ const DragDropEditor = () => {
                   const columnRect = e.currentTarget.getBoundingClientRect();
                   setActiveColumn({
                     left: columnRect.left,
+                    top: columnRect.top,
                     width: columnRect.width,
+                    height: columnRect.height,
                   });
+                  setMousePosition({ x: e.clientX, y: e.clientY });
                   setShowHr(true);
                   setIsDragging(true);
                 }}

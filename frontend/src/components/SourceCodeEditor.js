@@ -14,23 +14,30 @@ const SourceCodeEditor = ({ value, onChange }) => {
         value={value}
         onChange={onChange}
         InputProps={{
-          style: { 
-            fontFamily: 'monospace', 
+          style: {
+            fontFamily: 'monospace',
             lineHeight: '1.5em',
-            paddingLeft: '3em', // Make space for line numbers
+            paddingLeft: '3em',
+            border: 'none', // Remove the border
+          },
+          // Remove the outline when focused
+          sx: {
+            '& fieldset': { border: 'none' },
+            '&:hover fieldset': { border: 'none' },
+            '&.Mui-focused fieldset': { border: 'none' },
           },
         }}
       />
-      <Box 
-        position="absolute" 
-        top={0} 
-        left={0} 
-        bottom={0} 
-        sx={{ 
-          pointerEvents: 'none', 
+      <Box
+        position="absolute"
+        top={0}
+        left={0}
+        bottom={0}
+        sx={{
+          pointerEvents: 'none',
           userSelect: 'none',
-          width: '3em',
-          backgroundColor: '#f5f5f5',
+          width: '24px',
+          backgroundColor: 'white',
           borderRight: '1px solid #ddd',
           display: 'flex',
           flexDirection: 'column',
