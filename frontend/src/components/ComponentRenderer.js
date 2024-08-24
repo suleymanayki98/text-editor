@@ -10,7 +10,7 @@ const ComponentRenderer = ({ components, section, onDragOver, onDrop, renderComp
       borderRadius={2}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, section, components.length)}
-      style={{ minHeight: '400px' }}
+      className="min-h-[400px]"
     >
       {components.map((component, index) => renderComponent(component, section, index))}
     </Box>

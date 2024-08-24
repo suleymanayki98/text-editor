@@ -2,6 +2,32 @@ import React, { useState } from 'react';
 import { Modal, Box, TextField, Button, Grid, IconButton, Typography } from '@mui/material';
 import { Icon } from '@iconify/react';
 import CheckIcon from '@mui/icons-material/Check';
+import styled from 'styled-components';
+
+const StyledTypography = styled(Typography)`
+  width: 892px;
+  height: 20px;
+  font-weight: 500;
+  line-height: 20px;
+  font-size: 14px;
+  color: #637381;
+  font-family: 'Inter', sans-serif;
+  margin-bottom: 10px;
+  margin-top: 10px;
+`;
+const EditButton = styled(Typography)`
+  width: 892px;
+  height: 76px;
+  display: flex;
+  font-weight: 600;
+  line-height: 28px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #002E47;
+  align-items: center; /* 'left' is not valid here, use 'flex-start' */
+  margin-bottom: 10px;
+  text-transform: capitalize;
+`;
 
 const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
   const [backgroundColor, setBackgroundColor] = useState(currentEmailData.backgroundColor || '#ffffff');
@@ -30,12 +56,10 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
         borderRadius: '50%',
         backgroundColor: color,
         margin: 5,
-        border: color === '#ffffff' ? '2px solid #000' : selected ? '2px solid #333' : 'none',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: '5px'
+        border: color === '#ffffff' ? '1px solid #000' : selected ? '0px solid #333' : 'none',
+        marginTop: selected ? '0' : '3px'
       }}
+      className="items-center flex justify-center"
     >
       {selected && <CheckIcon icon="material-symbols:check" style={{ width: "16px", height: "16px", color: color === '#ffffff' ? '#000000' : '#ffffff' }} />}
     </IconButton>
@@ -47,58 +71,18 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
       onClose={onClose}
       aria-labelledby="modal-title"
       aria-describedby="modal-description"
+      
     >
       <Box
-        sx={{
-          borderRadius: '16px',
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 940,
-          bgcolor: 'background.paper',
-          p: 3,
-        }}
+        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-2xl w-[940px] bg-white px-6 pb-5"
       >
-        <Typography style={{
-          width: '892px',
-          height: '28px',
-          display: 'flex',
-          fontWeight: 600,
-          lineHeight: '28px',
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '16px',
-          color: '#002E47',
-          alignItems: 'left',
-          marginBottom: '20px',
-          textTransform: 'capitalize',
-        }}>
-          Edit Button
-        </Typography>
-        <Typography style={{
-          width: '892px',
-          height: '20px',
-          fontSize: '14px',
-          fontFamily: 'Inter, sans-serif',
-          fontWeight: 500,
-          lineHeight: '28px',
-          color: '#002E47',
-        }}>
+        <EditButton>Edit Button</EditButton>
+        <Typography className="w-[892px] h-[20px] text-sm font-medium leading-[20px] text-custom-dark font-sans">
           Links
         </Typography>
-        <Typography style={{
-          width: '892px',
-          height: '22px',
-          fontSize: '14px',
-          fontFamily: 'Inter, sans-serif',
-          fontWeight: 400,
-          lineHeight: '22px',
-          marginTop: '10px',
-          marginBottom: '10px',
-          color: '#637381',
-        }}>
+        <StyledTypography >
           You can add social media links or other links to the collection content.
-        </Typography>
+        </StyledTypography>
         <Box sx={{
           border: '1px solid',
           borderColor: 'grey.400',
@@ -113,8 +97,7 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
               container
               direction="column"
               justifyContent="center"
-              alignItems="center"
-              style={{ height: '17vh' }}  // Yüksekliği ekran yüksekliği olarak ayarlayın veya ihtiyaca göre değiştirin
+              alignItems="center"// Yüksekliği ekran yüksekliği olarak ayarlayın veya ihtiyaca göre değiştirin
             >
               <IconButton
                 size="small"
@@ -123,28 +106,16 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
               >
                 <Icon icon="arcticons:mail" width="24" height="24" style={{ color: 'black' }} />
               </IconButton>
-              <Typography
-                style={{
-                  width: '61px',
-                  height: '16px',
-                  fontSize: '10px',
-                  fontWeight: 500,
-                  lineHeight: '15.75px',
-                  color: '#637381',
-                  fontFamily: 'Inter, sans-serif',
-                  textAlign: 'center'
-                }}
+              <p
+                className="w-[61px] h-[16px] text-[10px] font-medium leading-[15.75px] text-[#637381] font-sans text-center"
               >
                 Change Icon
-              </Typography>
+              </p>
             </Grid>
 
             <Grid item xs={11}>
               <TextField
-                style={{
-                  borderRadius: '20px', marginLeft: '10px', marginBottom: '5px', marginRight: '10px', width: '780px',
-                  height: '44px',
-                }}
+                className="rounded-[20px] ml-[10px] mb-[5px] mr-[10px] w-[780px] h-[44px]"
                 label="Contact me"
                 fullWidth
                 size="small"
@@ -156,10 +127,7 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
                 }}
               />
               <TextField
-                style={{
-                  borderRadius: '20px', marginLeft: '10px', marginRight: '10px', width: '780px',
-                  height: '44px',
-                }}
+                className="rounded-[20px] ml-[10px] mb-[5px] mr-[10px] w-[780px] h-[44px]"
                 label="Email"
                 fullWidth
                 size="small"
@@ -174,18 +142,7 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
           </Grid>
         </Box>
         <Box mt={2}>
-          <Typography style={{
-            width: '892px',
-            height: '20px',
-            fontWeight: 500,
-            lineHeight: '20px',
-            fontSize: '14px',
-            color: '#637381',
-            fontFamily: 'Inter, sans-serif',
-            marginBottom: '10px',
-          }}>
-            Background Color
-          </Typography>
+          <StyledTypography>Background Color</StyledTypography>
           <Box display="flex" flexWrap="wrap" style={{
             marginBottom: '10px',
           }}>
@@ -201,18 +158,7 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
               />
             ))}
           </Box>
-          <Typography style={{
-            width: '892px',
-            height: '20px',
-            fontWeight: 500,
-            lineHeight: '20px',
-            fontSize: '14px',
-            color: '#637381',
-            fontFamily: 'Inter, sans-serif',
-            marginBottom: '10px',
-          }}>
-            Text Color
-          </Typography>
+          <StyledTypography>Text Color</StyledTypography>
           <Box display="flex" flexWrap="wrap">
             {colors.map((color) => (
               <ColorButton
@@ -227,47 +173,27 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
         <Box display="flex" justifyContent="flex-end" style={{ flexGrow: 1, marginTop: '10px', textTransform: 'capitalize', }}>
           <Button
             variant="outlined"
-            style={{
-              border: '1px solid #919EAB',
-              borderRadius: '8px',
-              padding: '6px 16px',
-              width: '79px',
-              height: '36px',
-              justifyContent: 'center',
-              textTransform: 'none',
-            }}
+            className="border border-custom-gray rounded-lg py-1.5 px-4 w-[79px] h-[36px] flex items-center justify-center text-base normal-case"
             onClick={onClose}
           >
-            <Typography style={{
-            fontWeight: 500,
-            lineHeight: '24px',
-            fontSize: '14px',
-            color: '#637381',
-            fontFamily: 'Inter, sans-serif',
-          }}>
-            Cancel
-          </Typography>
+            <p  className="font-medium text-[14px] leading-[24px] text-custom-light-gray font-inter normal-case">
+              Cancel
+            </p>
           </Button>
           <Button style={{
             marginLeft: '15px',
-              borderRadius: '8px',
-              padding: '6px 16px',
-              width: '65px',
-              height: '36px',
-              backgroundColor: '#29D25D',
-              justifyContent: 'center',
-              textTransform: 'none',
-          }} variant="contained"  onClick={onSave}>
-            
-            <Typography style={{
-            fontWeight: 500,
-            lineHeight: '24px',
-            fontSize: '14px',
-            color: '#FFFFFF',
-            fontFamily: 'Inter, sans-serif',
-          }}>
-            Save
-          </Typography>
+            borderRadius: '8px',
+            padding: '6px 16px',
+            width: '65px',
+            height: '36px',
+            backgroundColor: '#29D25D',
+            justifyContent: 'center',
+            textTransform: 'none',
+          }} variant="contained" onClick={onSave}>
+
+            <p className="font-medium text-[14px] leading-[24px] text-custom-white font-inter">
+              Save
+            </p>
           </Button>
         </Box>
       </Box>

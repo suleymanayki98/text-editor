@@ -4,7 +4,18 @@ import { Box, IconButton, Typography } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ComponentRenderer from './ComponentRenderer';
 import SourceCodeEditor from './SourceCodeEditor';
+import styled from 'styled-components';
 
+const StyledTypography = styled(Typography)`
+  width: 36px;
+  height: 25px;
+  font-weight: 500;
+  line-height: 25.2px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  margin-left: 15px;
+  text-align: left;
+`;
 const EditorArea = ({
   components,
   showSource,
@@ -74,16 +85,7 @@ const EditorArea = ({
           ) : (
             <Box>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  lineHeight: '25.2px',
-                  textAlign: 'left',
-                  marginLeft: '15px',
-                  width: '36px',
-                  height: '25px'
-                }} variant="subtitle1">Code</Typography>
+                <StyledTypography  variant="subtitle1">Code</StyledTypography>
                 <IconButton
                   size="small"
                   onClick={copyToClipboard}
@@ -95,7 +97,7 @@ const EditorArea = ({
                   />
                 </IconButton>
               </Box>
-              <hr style={{ border: 'none', borderTop: '1px solid #ddd', marginBottom: '20px' }} />
+              <hr className="border-t border-[#ddd] mb-[20px]" />
               <SourceCodeEditor
                 value={sourceCode.description}
                 onChange={(e) => handleSourceCodeChange('description', e)}

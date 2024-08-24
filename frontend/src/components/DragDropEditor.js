@@ -1,5 +1,5 @@
 // DragDropEditor.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IconButton, Box, Container, Typography, TextField, Button } from '@mui/material';
 import Sidebar from './Sidebar';
 import EditorArea from './EditorArea';
@@ -7,6 +7,7 @@ import Toolbar from './Toolbar';
 import { Icon } from '@iconify/react';
 import EmailModal from './EmailModal';
 import * as BackendService from './BackendService';
+import { Snackbar, Alert } from '@mui/material';
 
 const COMPONENT_TYPES = {
   PARAGRAPH: 'paragraph',
@@ -37,6 +38,7 @@ const DragDropEditor = () => {
   const [editorBounds, setEditorBounds] = useState(null);
   const [activeColumn, setActiveColumn] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   const iconStyle = (hover) => ({
     color: hover ? '#015FFB' : 'black',
@@ -59,17 +61,39 @@ const DragDropEditor = () => {
     const handleMouseMove = (event) => {
       setMousePosition({ x: event.clientX, y: event.clientY });
     };
-  
+
     window.addEventListener('mousemove', handleMouseMove);
-  
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
 
-  const handleClose = (section, index) => {
+  const showToast = (message, severity = 'success') => {
+    setToast({ open: true, message, severity });
+  };
+
+  const handleClose = (e, section, index, columnIndex) => {
+    e.stopPropagation(); // Olayın üst elementlere yayılmasını engelle
     const newComponents = JSON.parse(JSON.stringify(components));
-    newComponents[section] = newComponents[section].filter((_, i) => i !== index);
+
+    if (columnIndex !== undefined) {
+      const indices = index.toString().split('-').map(Number);
+      let current = newComponents[section];
+      for (let i = 0; i < indices.length - 1; i++) {
+        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+          current = current[indices[i]].columns[columnIndex];
+        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+          current = current[indices[i]].content;
+        } else {
+          current = current[indices[i]];
+        }
+      }
+      current.splice(indices[indices.length - 1], 1);
+    } else {
+      newComponents[section] = newComponents[section].filter((_, i) => i !== index);
+    }
+
     updateComponents(newComponents);
   };
 
@@ -78,7 +102,10 @@ const DragDropEditor = () => {
     setRedoStack([]);
     setComponents(newComponents);
     const newSourceCode = updateSourceCode(newComponents);
-    BackendService.saveComponentsToJson(newSourceCode.description);
+    BackendService.saveComponentsToJson(newSourceCode.description)
+      .catch((error) => {
+        showToast('Error saving components', 'error');
+      });
   };
 
   const clearEditor = () => {
@@ -87,20 +114,20 @@ const DragDropEditor = () => {
       description: [],
       about: []
     });
-  
+
     // Kaynak kodunu boşalt
     setSourceCode({
       description: '',
       about: ''
     });
-  
+
     // Geri alma ve ileri alma yığınlarını temizle
     setUndoStack([]);
     setRedoStack([]);
-  
+
     // Düzenleme indeksini sıfırla
     setEditingIndex({ section: null, index: null, columnIndex: null });
-  
+
     // Kaydedilen JSON'ı da temizle
     BackendService.saveComponentsToJson('');
   };
@@ -123,17 +150,18 @@ const DragDropEditor = () => {
         description: parsedComponents,
         about: components.about
       });
+      showToast('Components loaded successfully', 'success');
     } catch (error) {
-      console.error('Error loading components:', error);
+      showToast('Error loading components', 'error');
     }
   };
-
   const loadEmailData = async () => {
     try {
       const loadedEmailData = await BackendService.loadEmailDataFromJson();
       setEmailData(loadedEmailData);
+      showToast('Email data loaded successfully', 'success');
     } catch (error) {
-      console.error('Error loading email data:', error);
+      showToast('Error loading email data', 'error');
     }
   };
 
@@ -241,10 +269,10 @@ const DragDropEditor = () => {
             return `<button>${component.text || 'Contact me'}</button>`;
           }
           if (component.type === COMPONENT_TYPES.H1) {
-            return `<h1>${component.text || ''}</h1>`;
+            return `<h1 class="${component.className || 'text-4xl font-bold leading-normal m-0'}">${component.text || ''}</h1>`;
           }
           if (component.type === COMPONENT_TYPES.H2) {
-            return `<h2>${component.text || ''}</h2>`;
+            return `<h2 class="${component.className || 'text-3xl font-bold leading-normal m-0'}">${component.text || ''}</h2>`;
           }
           if (component.type === COMPONENT_TYPES.TWO_COLUMN) {
             return `<div class="two-column-layout">
@@ -269,6 +297,10 @@ const DragDropEditor = () => {
     setSourceCode(newSourceCode);
     return newSourceCode;
   };
+  const hideToast = () => {
+    setToast({ ...toast, open: false });
+  };
+
   const onDragOver = (e) => {
     e.preventDefault();
     setShowHr(true);
@@ -276,41 +308,34 @@ const DragDropEditor = () => {
   };
   const DragIndicator = ({ mousePosition, show, editorBounds, isDragging, activeColumn }) => {
     if (!show || !editorBounds || !isDragging) return null;
-  
+
     const isWithinEditor =
       mousePosition.y >= editorBounds.top &&
       mousePosition.y <= editorBounds.bottom &&
       mousePosition.x >= editorBounds.left &&
       mousePosition.x <= editorBounds.right;
-  
+
     if (!isWithinEditor) return null;
-  
-    let indicatorLeft = mousePosition.x;
-    let indicatorTop = mousePosition.y;
-    let indicatorWidth = '400px';
-    let indicatorHeight = '4px';
-  
+
+    let indicatorStyle = {
+      left: `${mousePosition.x}px`,
+      top: `${mousePosition.y}px`,
+      width: '400px',
+      height: '4px',
+    };
+
     if (activeColumn) {
-      indicatorLeft = Math.max(activeColumn.left, Math.min(mousePosition.x, activeColumn.left + activeColumn.width - parseFloat(indicatorWidth)));
-      indicatorTop = mousePosition.y;
-      if (indicatorLeft + parseFloat(indicatorWidth) > activeColumn.left + activeColumn.width) {
-        indicatorWidth = `${activeColumn.left + activeColumn.width - indicatorLeft}px`;
+      indicatorStyle.left = `${Math.max(activeColumn.left, Math.min(mousePosition.x, activeColumn.left + activeColumn.width - 400))}px`;
+      indicatorStyle.top = `${mousePosition.y}px`;
+      if (parseFloat(indicatorStyle.left) + 400 > activeColumn.left + activeColumn.width) {
+        indicatorStyle.width = `${activeColumn.left + activeColumn.width - parseFloat(indicatorStyle.left)}px`;
       }
     }
-  
+
     return (
       <div
-        style={{
-          position: 'fixed',
-          left: indicatorLeft,
-          top: indicatorTop,
-          width: indicatorWidth,
-          height: indicatorHeight,
-          background: '#1976d2',
-          pointerEvents: 'none',
-          zIndex: 9999,
-          transition: 'all 0.05s linear',
-        }}
+        className="fixed bg-blue-500 pointer-events-none z-50 transition-all duration-50 ease-linear"
+        style={indicatorStyle}
       />
     );
   };
@@ -321,7 +346,7 @@ const DragDropEditor = () => {
     setIsDragging(false);
   };
 
-  const onDrop = (e, targetSection, targetIndex, targetColumnIndex) => {
+  const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
     e.preventDefault();
     setShowHr(false);
     setIsDragging(false);
@@ -331,6 +356,13 @@ const DragDropEditor = () => {
     const newComponents = JSON.parse(JSON.stringify(components));
 
     const insertComponent = (components, index, columnIndex, component) => {
+      // Yeni eklenen veya taşınan bileşen için stilleri koru
+      if (component.type === COMPONENT_TYPES.H1 || component.type === COMPONENT_TYPES.H2) {
+        component.className = component.type === COMPONENT_TYPES.H1
+          ? "text-4xl font-bold leading-normal m-0"
+          : "text-3xl font-bold leading-normal m-0";
+      }
+
       if (columnIndex !== undefined) {
         const indices = index.toString().split('-').map(Number);
         let current = components;
@@ -356,7 +388,7 @@ const DragDropEditor = () => {
           }
 
           if (!current[indices[i]]) {
-            current[indices[i]] = { type: COMPONENT_TYPES.f, columns: [[], []] };
+            current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
           }
 
           if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
@@ -423,24 +455,7 @@ const DragDropEditor = () => {
 
     updateComponents(newComponents);
     setDraggingIndex(null);
-    resetStyles();
-  };
-  const resetStyles = () => {
-    const h1Elements = document.querySelectorAll('h1');
-    h1Elements.forEach(el => {
-      el.style.fontSize = '2em';
-      el.style.fontWeight = 'bold';
-      el.style.lineHeight = 'normal';
-      el.style.margin = '0';
-    });
-    const h2Elements = document.querySelectorAll('h2');
-    h2Elements.forEach(el => {
-      el.style.fontSize = '1.5em';
-      el.style.fontWeight = 'bold';
-      el.style.lineHeight = 'normal';
-      el.style.margin = '0';
-    });
-  };
+ }, [components, draggingIndex, updateComponents]);
   const undo = () => {
     if (undoStack.length === 0) return;
     const previousComponents = undoStack.pop();
@@ -458,8 +473,14 @@ const DragDropEditor = () => {
     }
     newEmailData[section][index] = currentEmailData;
     setEmailData(newEmailData);
-    BackendService.saveEmailDataToJson(newEmailData);
-    handleCloseModal();
+    BackendService.saveEmailDataToJson(newEmailData)
+      .then(() => {
+        showToast('Email data saved successfully', 'success');
+        handleCloseModal();
+      })
+      .catch((error) => {
+        showToast('Error saving email data', 'error');
+      });
   };
 
   const handleEmailDataChange = (field, value) => {
@@ -476,44 +497,36 @@ const DragDropEditor = () => {
     setComponents(nextComponents);
     updateSourceCode(nextComponents);
   };
-  const renderComponent = (component, section, index, columnIndex) => {
+  const handleTextChange = useCallback((e, section, index, columnIndex) => {
+    const newComponents = JSON.parse(JSON.stringify(components));
+    if (columnIndex !== undefined) {
+      const indices = index.split('-').map(Number);
+      let current = newComponents[section];
+      for (let i = 0; i < indices.length - 1; i++) {
+        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+          current = current[indices[i]].columns[columnIndex];
+        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+          current = current[indices[i]].content;
+        } else {
+          current = current[indices[i]];
+        }
+      }
+      current[indices[indices.length - 1]].text = e.target.value;
+    } else {
+      newComponents[section][index].text = e.target.value;
+    }
+    updateComponents(newComponents);
+  }, [components, updateComponents]);
+  const renderComponent = useCallback((component, section, index, columnIndex) => {
     const isDragging = draggingIndex &&
       draggingIndex.section === section &&
       draggingIndex.index === index &&
       draggingIndex.columnIndex === columnIndex;
-
-    const handleTextChange = (e, section, index, columnIndex) => {
-      const newComponents = JSON.parse(JSON.stringify(components));
-      if (columnIndex !== undefined) {
-        const indices = index.split('-').map(Number);
-        let current = newComponents[section];
-        for (let i = 0; i < indices.length - 1; i++) {
-          if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
-            current = current[indices[i]].columns[columnIndex];
-          } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
-            current = current[indices[i]].content;
-          } else {
-            current = current[indices[i]];
-          }
-        }
-        current[indices[indices.length - 1]].text = e.target.value;
-      } else {
-        newComponents[section][index].text = e.target.value;
-      }
-      updateComponents(newComponents);
-    };
-
     return (
       <div
         key={`${component.id}-${columnIndex}`}
         data-index={index}
-        style={{
-          marginBottom: '10px',
-          cursor: 'move',
-          opacity: isDragging ? 0.5 : 1,
-          border: isDragging ? '1px dashed #000' : 'none',
-          padding: '8px',
-        }}
+        className={`mb-2.5 cursor-move ${isDragging ? 'opacity-50 border border-dashed border-black' : ''} p-2`}
         onDragStart={(e) => {
           onDragStart(e, section, index, columnIndex);
           setShowHr(true);
@@ -538,17 +551,11 @@ const DragDropEditor = () => {
         draggable
       >
         {component.type === COMPONENT_TYPES.PARAGRAPH && (
-          <div style={{ position: 'relative', border: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'none' : '1px dashed grey', }}>
+          <div className={`relative ${editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? '' : 'border border-transparent hover:border-dashed hover:border-gray-400 p-2'}`}>
             <Typography
               variant="body1"
               onClick={() => setEditingIndex({ section, index, columnIndex })}
-              style={{
-                padding: '4px',
-                border: 'none',
-                boxShadow: 'none',
-                whiteSpace: 'pre-wrap',
-                visibility: editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible',
-              }}
+              className={`p-1 border-none shadow-none whitespace-pre-wrap ${editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible'}`}
             >
               {component.text || 'This is a paragraph.'}
             </Typography>
@@ -560,26 +567,17 @@ const DragDropEditor = () => {
                 onChange={(e) => handleTextChange(e, section, index, columnIndex)}
                 onBlur={() => setEditingIndex({ section: null, index: null, columnIndex: null })}
                 autoFocus
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'transparent',
-                  border: 'none',
-                }}
+                className="absolute inset-0 bg-transparent border-none"
                 InputProps={{
-                  style: {
-                    backgroundColor: 'transparent',
-                  },
+                  className: "bg-transparent",
                 }}
               />
             )}
           </div>
         )}
+
         {component.type === COMPONENT_TYPES.H1 && (
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? (
               <div
                 contentEditable
@@ -594,28 +592,14 @@ const DragDropEditor = () => {
                     e.target.blur();
                   }
                 }}
-                style={{
-                  fontSize: '2em',
-                  fontWeight: 'bold',
-                  lineHeight: 'normal',
-                  margin: 0,
-                  padding: '4px',
-                  outline: 'none',
-                  border: '1px solid #ccc',
-                }}
+                className="text-4xl font-bold leading-normal m-0 p-1 border border-gray-300 outline-none"
               >
                 {component.text || 'Heading 1'}
               </div>
             ) : (
               <h1
                 onClick={() => setEditingIndex({ section, index, columnIndex })}
-                style={{
-                  padding: '4px',
-                  margin: 0,
-                  border: 'none',
-                  boxShadow: 'none',
-                  whiteSpace: 'pre-wrap',
-                }}
+                className={`${component.className || 'text-4xl font-bold leading-normal m-0'} p-1 border-none shadow-none whitespace-pre-wrap`}
               >
                 {component.text || 'Heading 1'}
               </h1>
@@ -624,7 +608,7 @@ const DragDropEditor = () => {
         )}
 
         {component.type === COMPONENT_TYPES.H2 && (
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? (
               <div
                 contentEditable
@@ -639,132 +623,69 @@ const DragDropEditor = () => {
                     e.target.blur();
                   }
                 }}
-                style={{
-                  fontSize: '1.5em',
-                  fontWeight: 'bold',
-                  lineHeight: 'normal',
-                  margin: 0,
-                  padding: '4px',
-                  outline: 'none',
-                  border: '1px solid #ccc',
-                }}
+                className="text-3xl font-bold leading-normal m-0 p-1 outline-none border border-gray-300"
               >
                 {component.text || 'Heading 2'}
               </div>
             ) : (
               <h2
                 onClick={() => setEditingIndex({ section, index, columnIndex })}
-                style={{
-                  padding: '4px',
-                  margin: 0,
-                  border: 'none',
-                  boxShadow: 'none',
-                  whiteSpace: 'pre-wrap',
-                }}
+                className={`${component.className || 'text-3xl font-bold leading-normal m-0'} p-1 border-none shadow-none whitespace-pre-wrap`}
               >
                 {component.text || 'Heading 2'}
               </h2>
             )}
           </div>
         )}
+
         {component.type === COMPONENT_TYPES.BUTTON && (
-          <div
-            style={{
-              border: '1px dashed grey',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Button
-              variant="text"
-              component="a"
+          <div className="p-2 group border border-transparent flex justify-between items-center transition-all duration-300 ease-in-out hover:border-dashed hover:border-gray-400">
+            <a
               href={`mailto:${emailData[section]?.[index]?.email || ''}`}
-              style={{
-                borderRadius: '10%',
-                color: 'black',
-                textTransform: 'capitalize',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-              }}
+              className="flex items-center text-black no-underline capitalize rounded-lg text-sm"
+              onClick={(e) => e.stopPropagation()} // E-posta linkinin tıklanmasını engelleme
             >
-              <IconButton size="small" variant="contained" style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '4px',
-                padding: '6px',
-                height: '30px',
-                width: '30px',
-                color: 'black',
-                border: '0.75px solid #919EAB52',
-                marginRight: '10px',
-              }}>
+              <div className="bg-gray-100 rounded-md p-1 h-7 w-7 text-black border border-transparent mr-2 flex items-center justify-center">
                 <Icon icon="mdi:plus" width="24" height="24" />
-              </IconButton>
-              <Typography style={{
-                fontSize: '14px',
-                color: '#002E47',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 400,
-                lineHeight: '22px',
-              }}> {emailData[section]?.[index]?.buttonText || component.text || 'Contact me'}</Typography>
+              </div>
+              <span className="text-gray-900 text-sm font-normal leading-5">
+                {emailData[section]?.[index]?.buttonText || component.text || 'Contact me'}
+              </span>
+            </a>
 
-            </Button>
-
-            <div style={{ display: 'flex' }}>
-              <IconButton
-                size="small"
-                variant="contained"
-                style={{
-                  backgroundColor: '#f5f5f5',
-                  borderRadius: '4px',
-                  width: '56px',
-                  height: '28px',
-                  padding: '4px',
-                  gap: '8px',
-                  color: 'black',
-                  marginRight: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+            <div className="flex">
+              <button
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className="bg-gray-100 rounded-md w-14 h-7 p-1 gap-2 text-black mr-2 flex items-center justify-center"
               >
                 <Icon
-                  onClick={() => handleOpenModal(section, index)}
-                  onMouseEnter={() => setIsHovered(true)}
-                  onMouseLeave={() => setIsHovered(false)}
-                  style={iconStyle(isHovered)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal(section, index);
+                  }}
                   icon="fluent:edit-32-filled"
                   width="18"
                   height="18"
+                  style={iconStyle(isHovered)}
                 />
-                <Icon
-                  onClick={() => handleClose(section, index)}
-                  icon="ic:baseline-close"
-                  width="20"
-                  height="20"
-                />
-              </IconButton>
+                <Icon onClick={(e) => handleClose(e, section, index, columnIndex)} icon="ic:baseline-close" width="20" height="20" />
+              </button>
             </div>
           </div>
-
-
         )}
+
+
+
         {component.type === COMPONENT_TYPES.TWO_COLUMN && (
           <Box
             key={component.id}
-            display="flex"
-            justifyContent="space-between"
-            style={{ minHeight: '200px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px', position: 'relative' }}
+            className="flex justify-between min-h-[200px] border border-gray-300 rounded mb-2.5 relative"
           >
             {(component.columns || [[], []]).map((column, colIndex) => (
               <Box
                 key={`${component.id}-col-${colIndex}`}
-                flex={1}
-                p={1}
-                border={1}
-                borderColor="grey.300"
-                borderRadius={2}
+                className="flex-1 p-1 border border-gray-300 rounded-md min-h-full flex flex-col"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -792,7 +713,6 @@ const DragDropEditor = () => {
                   setShowHr(false);
                   setIsDragging(false);
                 }}
-                style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}
               >
                 {(column || []).map((nestedComponent, nestedIndex) =>
                   renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
@@ -801,23 +721,24 @@ const DragDropEditor = () => {
             ))}
           </Box>
         )}
+
         {component.type === COMPONENT_TYPES.ONE_COLUMN && (
           <Box
             key={component.id}
-            style={{ border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px', padding: '10px' }}
+            className="border border-gray-300 rounded mb-2.5 p-2.5"
           >
             <Box
               onDragOver={(e) => {
-              e.preventDefault();
+                e.preventDefault();
                 e.stopPropagation();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onDrop(e, section, index, 0);
-            }}
-              style={{ minHeight: '100px' }}
-          >
+              }}
+              className="min-h-[100px]"
+            >
               {(component.content || []).map((nestedComponent, nestedIndex) =>
                 renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
               )}
@@ -826,12 +747,17 @@ const DragDropEditor = () => {
         )}
       </div>
     );
-  };
+  }, [components, editingIndex, emailData, handleClose, handleOpenModal, handleTextChange, setEditingIndex]);
 
   // ... (other functions remain the same)
 
   return (
     <Container>
+      <Snackbar open={toast.open} autoHideDuration={6000} onClose={hideToast}>
+        <Alert onClose={hideToast} severity={toast.severity} sx={{ width: '100%' }}>
+          {toast.message}
+        </Alert>
+      </Snackbar>
       <Toolbar
         toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         sidebarOpen={sidebarOpen}
