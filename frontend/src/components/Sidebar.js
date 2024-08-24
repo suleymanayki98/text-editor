@@ -76,7 +76,7 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
     <div
       ref={sidebarRef}
       onMouseDown={handleMouseDown}
-      className="fixed w-272 h-426 bg-light-gray shadow-lg z-50"
+      className="fixed w-272 h-426 bg-light-gray shadow-lg z-50 rounded-r-2xl"
       style={{
         left: sidebarPosition.x,
         top: sidebarPosition.y,
