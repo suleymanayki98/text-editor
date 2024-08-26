@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Box, TextField, Button, Grid, IconButton, Typography } from '@mui/material';
 import { Icon } from '@iconify/react';
 import CheckIcon from '@mui/icons-material/Check';
@@ -34,6 +34,11 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
   const [textColor, setTextColor] = useState(currentEmailData.textColor || '#000000');
 
   const colors = ['#ffffff', '#002E47', '#015FFB', '#29D25D', '#00B8D9', '#003768', '#FFAB00', '#FFAC82', '#EB2B2E', '#637381', '#919EAB', '#F4F6F8'];
+
+  useEffect(() => {
+    setBackgroundColor(currentEmailData.backgroundColor || '#ffffff');
+    setTextColor(currentEmailData.textColor || '#000000');
+  }, [currentEmailData]);
 
   const handleBackgroundColorChange = (color) => {
     setBackgroundColor(color);
@@ -71,7 +76,7 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
       onClose={onClose}
       aria-labelledby="modal-title"
       aria-describedby="modal-description"
-      
+
     >
       <Box
         className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-2xl w-[940px] bg-white px-6 pb-5"
@@ -176,7 +181,7 @@ const EmailModal = ({ open, onClose, currentEmailData, onSave, onChange }) => {
             className="border border-custom-gray rounded-lg py-1.5 px-4 w-[79px] h-[36px] flex items-center justify-center text-base normal-case"
             onClick={onClose}
           >
-            <p  className="font-medium text-[14px] leading-[24px] text-custom-light-gray font-inter normal-case">
+            <p className="font-medium text-[14px] leading-[24px] text-custom-light-gray font-inter normal-case">
               Cancel
             </p>
           </Button>

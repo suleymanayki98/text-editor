@@ -455,7 +455,7 @@ const DragDropEditor = () => {
 
     updateComponents(newComponents);
     setDraggingIndex(null);
- }, [components, draggingIndex, updateComponents]);
+  }, [components, draggingIndex, updateComponents]);
   const undo = () => {
     if (undoStack.length === 0) return;
     const previousComponents = undoStack.pop();
@@ -473,6 +473,14 @@ const DragDropEditor = () => {
     }
     newEmailData[section][index] = currentEmailData;
     setEmailData(newEmailData);
+
+    // Komponenti güncelle
+    const newComponents = JSON.parse(JSON.stringify(components));
+    if (newComponents[section] && newComponents[section][index]) {
+      newComponents[section][index].backgroundColor = currentEmailData.backgroundColor;
+    }
+    setComponents(newComponents);
+
     BackendService.saveEmailDataToJson(newEmailData)
       .then(() => {
         showToast('Email data saved successfully', 'success');
@@ -641,11 +649,17 @@ const DragDropEditor = () => {
         {component.type === COMPONENT_TYPES.BUTTON && (
           <div className="p-2 group border border-transparent flex justify-between items-center transition-all duration-300 ease-in-out hover:border-dashed hover:border-gray-400">
             <a
+
               href={`mailto:${emailData[section]?.[index]?.email || ''}`}
               className="flex items-center text-black no-underline capitalize rounded-lg text-sm"
-              onClick={(e) => e.stopPropagation()} // E-posta linkinin tıklanmasını engelleme
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gray-100 rounded-md p-1 h-7 w-7 text-black border border-transparent mr-2 flex items-center justify-center">
+              <div
+                className="rounded-md p-1 h-7 w-7 text-black border border-transparent mr-2 flex items-center justify-center"
+                style={{
+                  backgroundColor: component.backgroundColor || emailData[section]?.[index]?.backgroundColor || '#F4F6F8',
+                }}
+              >
                 <Icon icon="mdi:plus" width="24" height="24" />
               </div>
               <span className="text-gray-900 text-sm font-normal leading-5">
@@ -673,79 +687,84 @@ const DragDropEditor = () => {
               </button>
             </div>
           </div>
-        )}
+        )
+        }
 
 
 
-        {component.type === COMPONENT_TYPES.TWO_COLUMN && (
-          <Box
-            key={component.id}
-            className="flex justify-between min-h-[200px] border border-gray-300 rounded mb-2.5 relative"
-          >
-            {(component.columns || [[], []]).map((column, colIndex) => (
+        {
+          component.type === COMPONENT_TYPES.TWO_COLUMN && (
+            <Box
+              key={component.id}
+              className="flex justify-between min-h-[200px] border border-gray-300 rounded mb-2.5 relative"
+            >
+              {(component.columns || [[], []]).map((column, colIndex) => (
+                <Box
+                  key={`${component.id}-col-${colIndex}`}
+                  className="flex-1 p-1 border border-gray-300 rounded-md min-h-full flex flex-col"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const columnRect = e.currentTarget.getBoundingClientRect();
+                    setActiveColumn({
+                      left: columnRect.left,
+                      top: columnRect.top,
+                      width: columnRect.width,
+                      height: columnRect.height,
+                    });
+                    setMousePosition({ x: e.clientX, y: e.clientY });
+                    setShowHr(true);
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActiveColumn(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDrop(e, section, index, colIndex);
+                    setActiveColumn(null);
+                    setShowHr(false);
+                    setIsDragging(false);
+                  }}
+                >
+                  {(column || []).map((nestedComponent, nestedIndex) =>
+                    renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
+                  )}
+                </Box>
+              ))}
+            </Box>
+          )
+        }
+
+        {
+          component.type === COMPONENT_TYPES.ONE_COLUMN && (
+            <Box
+              key={component.id}
+              className="border border-gray-300 rounded mb-2.5 p-2.5"
+            >
               <Box
-                key={`${component.id}-col-${colIndex}`}
-                className="flex-1 p-1 border border-gray-300 rounded-md min-h-full flex flex-col"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const columnRect = e.currentTarget.getBoundingClientRect();
-                  setActiveColumn({
-                    left: columnRect.left,
-                    top: columnRect.top,
-                    width: columnRect.width,
-                    height: columnRect.height,
-                  });
-                  setMousePosition({ x: e.clientX, y: e.clientY });
-                  setShowHr(true);
-                  setIsDragging(true);
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setActiveColumn(null);
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onDrop(e, section, index, colIndex);
-                  setActiveColumn(null);
-                  setShowHr(false);
-                  setIsDragging(false);
+                  onDrop(e, section, index, 0);
                 }}
+                className="min-h-[100px]"
               >
-                {(column || []).map((nestedComponent, nestedIndex) =>
-                  renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
+                {(component.content || []).map((nestedComponent, nestedIndex) =>
+                  renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
                 )}
               </Box>
-            ))}
-          </Box>
-        )}
-
-        {component.type === COMPONENT_TYPES.ONE_COLUMN && (
-          <Box
-            key={component.id}
-            className="border border-gray-300 rounded mb-2.5 p-2.5"
-          >
-            <Box
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDrop(e, section, index, 0);
-              }}
-              className="min-h-[100px]"
-            >
-              {(component.content || []).map((nestedComponent, nestedIndex) =>
-                renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
-              )}
             </Box>
-          </Box>
-        )}
-      </div>
+          )
+        }
+      </div >
     );
   }, [components, editingIndex, emailData, handleClose, handleOpenModal, handleTextChange, setEditingIndex]);
 

@@ -9,5 +9,9 @@
       "email": "suleymanbilisim@gmail.com"
     }
   ],
-  "description": []
+  "description": [
+    {
+      "backgroundColor": "#ffffff"
+    }
+  ]
 }
