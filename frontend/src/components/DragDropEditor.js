@@ -657,6 +657,7 @@ const DragDropEditor = () => {
               <div
                 className="rounded-md p-1 h-7 w-7 text-black border border-transparent mr-2 flex items-center justify-center"
                 style={{
+                  border: component.backgroundColor === '#ffffff' ? 'none' : '0.75px solid #919EAB',
                   backgroundColor: component.backgroundColor || emailData[section]?.[index]?.backgroundColor || '#F4F6F8',
                 }}
               >
