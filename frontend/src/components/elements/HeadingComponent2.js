@@ -1,4 +1,4 @@
-// components/HeadingComponent.js
+  // components/HeadingComponent.js
 import React from 'react';
 import styled from 'styled-components';
 
@@ -27,7 +27,7 @@ const StyledHeading = styled(props => props.isH1 ? 'h1' : 'h2')`
   white-space: pre-wrap;
 `;
 
-const HeadingComponent = ({ component, section, index, columnIndex, editingIndex, setEditingIndex, handleTextChange }) => {
+const HeadingComponent2 = ({ component, section, index, columnIndex, editingIndex, setEditingIndex, handleTextChange }) => {
   const isEditing = editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex;
   const isH1 = component.type === 'h1';
 
@@ -47,20 +47,20 @@ const HeadingComponent = ({ component, section, index, columnIndex, editingIndex
             e.target.blur();
           }
         }}
-        className="text-4xl font-bold leading-normal m-0 p-1 border border-gray-300 outline-none"
+        className="text-3xl font-bold leading-normal m-0 p-1 outline-none border border-gray-300"
       >
-        {component.text || 'Heading 1'}
+        {component.text || 'Heading 2'}
       </div>
     ) : (
-      <h1
+      <h2
         onClick={() => setEditingIndex({ section, index, columnIndex })}
-        className={`${component.className || 'text-4xl font-bold leading-normal m-0'} p-1 border-none shadow-none whitespace-pre-wrap`}
+        className={`${component.className || 'text-3xl font-bold leading-normal m-0'} p-1 border-none shadow-none whitespace-pre-wrap`}
       >
-        {component.text || 'Heading 1'}
-      </h1>
+        {component.text || 'Heading 2'}
+      </h2>
     )}
   </div>
   );
 };
 
-export default HeadingComponent;
+export default HeadingComponent2;

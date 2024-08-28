@@ -12,6 +12,7 @@ import { Snackbar, Alert } from '@mui/material';
 import { COMPONENT_TYPES } from './constants';
 import ParagraphComponent from './elements/ParagraphComponent';
 import HeadingComponent from './elements/HeadingComponent';
+import HeadingComponent2 from './elements/HeadingComponent2';
 import ButtonComponent from './elements/ButtonComponent';
 import TwoColumnComponent from './elements/TwoColumnComponent';
 import OneColumnComponent from './elements/OneColumnComponent';
@@ -585,8 +586,19 @@ const DragDropEditor = () => {
           />
         )}
 
-        {(component.type === COMPONENT_TYPES.H1 || component.type === COMPONENT_TYPES.H2) && (
+        {(component.type === COMPONENT_TYPES.H1) && (
           <HeadingComponent
+            component={component}
+            section={section}
+            index={index}
+            columnIndex={columnIndex}
+            editingIndex={editingIndex}
+            setEditingIndex={setEditingIndex}
+            handleTextChange={handleTextChange}
+          />
+        )}
+        {(component.type === COMPONENT_TYPES.H2) && (
+          <HeadingComponent2
             component={component}
             section={section}
             index={index}
