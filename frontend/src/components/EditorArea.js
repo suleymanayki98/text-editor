@@ -6,6 +6,28 @@ import ComponentRenderer from './ComponentRenderer';
 import SourceCodeEditor from './SourceCodeEditor';
 import styled from 'styled-components';
 
+const StyledBox = styled(Box)`
+  display: flex;
+  margin-bottom: 16px;
+`;
+
+const EditorContainer = styled(Box)`
+  flex: 2;
+  padding: 16px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+`;
+
+const CodeSection = styled(Box)`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+`;
+
 const StyledTypography = styled(Typography)`
   width: 36px;
   height: 25px;
@@ -16,6 +38,12 @@ const StyledTypography = styled(Typography)`
   margin-left: 15px;
   text-align: left;
 `;
+
+const Divider = styled.hr`
+  border-top: 1px solid #ddd;
+  margin-bottom: 20px;
+`;
+
 const EditorArea = ({
   components,
   showSource,
@@ -43,17 +71,9 @@ const EditorArea = ({
   };
 
   return (
-    <Box display="flex" mb={2}>
-      <Box
+    <StyledBox>
+      <EditorContainer
         ref={editorRef}
-        flex={2}
-        p={2}
-        border={1}
-        borderColor="grey.300"
-        borderRadius={2}
-        display="flex"
-        flexDirection="column"
-        position="relative"
         onDragOver={onDragOver}
       >
         {!showSource && (
@@ -73,7 +93,7 @@ const EditorArea = ({
             />
           </IconButton>
         )}
-        <Box flex={2} mr={2} mt={showSource ? 2 : 0}>
+        <Box flex={2} marginRight={2} marginTop={showSource ? 2 : 0}>
           {!showSource ? (
             <ComponentRenderer
               components={components.description}
@@ -84,8 +104,8 @@ const EditorArea = ({
             />
           ) : (
             <Box>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <StyledTypography  variant="subtitle1">Code</StyledTypography>
+              <CodeSection>
+                <StyledTypography variant="subtitle1">Code</StyledTypography>
                 <IconButton
                   size="small"
                   onClick={copyToClipboard}
@@ -96,8 +116,8 @@ const EditorArea = ({
                     height="20"
                   />
                 </IconButton>
-              </Box>
-              <hr className="border-t border-[#ddd] mb-[20px]" />
+              </CodeSection>
+              <Divider />
               <SourceCodeEditor
                 value={sourceCode.description}
                 onChange={(e) => handleSourceCodeChange('description', e)}
@@ -105,8 +125,8 @@ const EditorArea = ({
             </Box>
           )}
         </Box>
-      </Box>
-    </Box>
+      </EditorContainer>
+    </StyledBox>
   );
 };
 

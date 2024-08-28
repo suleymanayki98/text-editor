@@ -1,25 +1,69 @@
-// SourceCodeEditor.js
 import React from 'react';
+import styled from 'styled-components';
+
+// Styled components
+const EditorContainer = styled.div`
+  position: relative;
+  font-family: 'Courier New', monospace;
+  white-space: pre;
+  overflow: auto;
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  font-family: 'Courier New', monospace;
+  line-height: 1.5em;
+  padding-left: 12px;
+  border: none;
+  outline: none;
+  &:hover {
+    border: none;
+  }
+  &:focus {
+    border: none;
+    box-shadow: none;
+  }
+`;
+
+const LineNumbers = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  pointer-events: none;
+  user-select: none;
+  width: 24px;
+  background-color: #fff;
+  border-right: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-right: 8px;
+  padding-top: 12px;
+`;
+
+const LineNumber = styled.div`
+  color: #999;
+  line-height: 1.5em;
+`;
 
 const SourceCodeEditor = ({ value, onChange }) => {
   const lines = value.split('\n');
 
   return (
-    <div className="relative font-mono whitespace-pre overflow-auto">
-      <textarea
-        className="w-full font-mono leading-normal pl-12 border-none outline-none focus:ring-0 hover:border-none focus:border-none"
+    <EditorContainer>
+      <TextArea
         value={value}
         onChange={onChange}
-        style={{lineHeight: '1.5em'}}
       />
-      <div className="absolute top-0 left-0 bottom-0 pointer-events-none select-none w-6 bg-white border-r border-gray-300 flex flex-col items-end pr-2 pt-3.5">
+      <LineNumbers>
         {lines.map((_, index) => (
-          <div key={index} className="text-gray-500" style={{lineHeight: '1.5em'}}>
+          <LineNumber key={index}>
             {index + 1}
-          </div>
+          </LineNumber>
         ))}
-      </div>
-    </div>
+      </LineNumbers>
+    </EditorContainer>
   );
 };
 

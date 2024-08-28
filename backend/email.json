@@ -1,17 +1,7 @@
 {
-  "about": [
-    {
-      "buttonText": "Contact me",
-      "email": "suleymanbilisim@gmail.com"
-    },
-    {
-      "buttonText": "data",
-      "email": "suleymanbilisim@gmail.com"
+  "description": {
+    "0": {
+      "backgroundColor": "#FFAB00"
     }
-  ],
-  "description": [
-    {
-      "backgroundColor": "#ffffff"
-    }
-  ]
+  }
 }

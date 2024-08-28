@@ -1,5 +1,5 @@
-// DragDropEditor.js
 import React, { useState, useEffect, useCallback } from 'react';
+import styled from 'styled-components';
 import { IconButton, Box, Container, Typography, TextField, Button } from '@mui/material';
 import Sidebar from './Sidebar';
 import EditorArea from './EditorArea';
@@ -17,6 +17,162 @@ const COMPONENT_TYPES = {
   H1: 'h1',
   H2: 'h2',
 };
+
+const ComponentWrapper = styled.div`
+  margin-bottom: 0.625rem;
+  cursor: move;
+  padding: 0.5rem;
+  ${props => props.isDragging && `
+    opacity: 0.5;
+    border: 1px dashed black;
+  `}
+`;
+
+const EditableComponent = styled.div`
+  position: relative;
+  ${props => !props.isEditing && `
+    border: 1px solid transparent;
+    &:hover {
+      border: 1px dashed #a0aec0;
+    }
+  `}
+  padding: 0.5rem;
+`;
+
+const StyledTypography = styled(Typography)`
+  padding: 0.25rem;
+  border: none;
+  box-shadow: none;
+  white-space: pre-wrap;
+  ${props => props.isEditing && 'display: none;'}
+`;
+
+const StyledTextField = styled(TextField)`
+  position: absolute;
+  inset: 0;
+  background-color: transparent;
+  border: none;
+  .MuiInputBase-root {
+    background-color: transparent;
+  }
+`;
+
+const HeadingWrapper = styled.div`
+  position: relative;
+`;
+
+const EditableHeading = styled.div`
+  font-size: ${props => props.isH1 ? '2.25rem' : '1.875rem'};
+  font-weight: bold;
+  line-height: 1.2;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid #d1d5db;
+  outline: none;
+`;
+
+const StyledHeading = styled(props => props.isH1 ? 'h1' : 'h2')`
+  font-size: ${props => props.isH1 ? '2.25rem' : '1.875rem'};
+  font-weight: bold;
+  line-height: 1.2;
+  margin: 0;
+  padding: 0.25rem;
+  border: none;
+  box-shadow: none;
+  white-space: pre-wrap;
+`;
+
+const ButtonWrapper = styled.div`
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease-in-out;
+  &:hover {
+    border: 1px dashed #a0aec0;
+  }
+`;
+
+const ButtonLink = styled.a`
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: black;
+  text-transform: capitalize;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+`;
+
+const ButtonIcon = styled.div`
+  border-radius: 0.375rem;
+  padding: 0.25rem;
+  height: 1.75rem;
+  width: 1.75rem;
+  color: black;
+  border: ${props => props.backgroundColor === '#ffffff' ? 'none' : '0.75px solid #919EAB'};
+  background-color: ${props => props.backgroundColor || '#F4F6F8'};
+  margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ButtonText = styled.span`
+  color: #111827;
+  font-size: 0.875rem;
+  font-weight: normal;
+  line-height: 1.25;
+`;
+
+const ButtonControls = styled.div`
+  display: flex;
+`;
+
+const ControlButton = styled.button`
+  background-color: #f3f4f6;
+  border-radius: 0.375rem;
+  width: 3.5rem;
+  height: 1.75rem;
+  padding: 0.25rem;
+  gap: 0.5rem;
+  color: black;
+  margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const TwoColumnWrapper = styled(Box)`
+  display: flex;
+  justify-content: space-between;
+  min-height: 200px;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  margin-bottom: 0.625rem;
+  position: relative;
+`;
+
+const ColumnWrapper = styled(Box)`
+  flex: 1;
+  padding: 0.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+`;
+
+const OneColumnWrapper = styled(Box)`
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  margin-bottom: 0.625rem;
+  padding: 0.625rem;
+`;
+
+const OneColumnContent = styled(Box)`
+  min-height: 100px;
+`;
 const DragDropEditor = () => {
   const [components, setComponents] = useState({ description: [], about: [] });
   const [sourceCode, setSourceCode] = useState({ description: '', about: '' });
@@ -25,7 +181,6 @@ const DragDropEditor = () => {
   const [editingIndex, setEditingIndex] = useState({ section: null, index: null });
   const [redoStack, setRedoStack] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarPosition, setSidebarPosition] = useState({ x: 0, y: 0 });
   const [draggingIndex, setDraggingIndex] = useState(null);
   const [emailIndex, setEmailIndex] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,6 +194,11 @@ const DragDropEditor = () => {
   const [activeColumn, setActiveColumn] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+
+  const [editorState, setEditorState] = useState({
+    mousePosition: { x: 0, y: 0 },
+    sidebarPosition: { x: 0, y: 0 },
+  });
 
   const iconStyle = (hover) => ({
     color: hover ? '#015FFB' : 'black',
@@ -525,16 +685,18 @@ const DragDropEditor = () => {
     }
     updateComponents(newComponents);
   }, [components, updateComponents]);
-  const renderComponent = useCallback((component, section, index, columnIndex) => {
+
+   const renderComponent = useCallback((component, section, index, columnIndex) => {
     const isDragging = draggingIndex &&
       draggingIndex.section === section &&
       draggingIndex.index === index &&
       draggingIndex.columnIndex === columnIndex;
+
     return (
-      <div
+      <ComponentWrapper
         key={`${component.id}-${columnIndex}`}
         data-index={index}
-        className={`mb-2.5 cursor-move ${isDragging ? 'opacity-50 border border-dashed border-black' : ''} p-2`}
+        isDragging={isDragging}
         onDragStart={(e) => {
           onDragStart(e, section, index, columnIndex);
           setShowHr(true);
@@ -559,35 +721,31 @@ const DragDropEditor = () => {
         draggable
       >
         {component.type === COMPONENT_TYPES.PARAGRAPH && (
-          <div className={`relative ${editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? '' : 'border border-transparent hover:border-dashed hover:border-gray-400 p-2'}`}>
-            <Typography
+          <EditableComponent isEditing={editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex}>
+            <StyledTypography
               variant="body1"
               onClick={() => setEditingIndex({ section, index, columnIndex })}
-              className={`p-1 border-none shadow-none whitespace-pre-wrap ${editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? 'hidden' : 'visible'}`}
+              isEditing={editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex}
             >
               {component.text || 'This is a paragraph.'}
-            </Typography>
+            </StyledTypography>
             {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex && (
-              <TextField
+              <StyledTextField
                 fullWidth
                 multiline
                 value={component.text || ''}
                 onChange={(e) => handleTextChange(e, section, index, columnIndex)}
                 onBlur={() => setEditingIndex({ section: null, index: null, columnIndex: null })}
                 autoFocus
-                className="absolute inset-0 bg-transparent border-none"
-                InputProps={{
-                  className: "bg-transparent",
-                }}
               />
             )}
-          </div>
+          </EditableComponent>
         )}
 
-        {component.type === COMPONENT_TYPES.H1 && (
-          <div className="relative">
+        {(component.type === COMPONENT_TYPES.H1 || component.type === COMPONENT_TYPES.H2) && (
+          <HeadingWrapper>
             {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? (
-              <div
+              <EditableHeading
                 contentEditable
                 suppressContentEditableWarning
                 onBlur={(e) => {
@@ -600,79 +758,39 @@ const DragDropEditor = () => {
                     e.target.blur();
                   }
                 }}
-                className="text-4xl font-bold leading-normal m-0 p-1 border border-gray-300 outline-none"
+                isH1={component.type === COMPONENT_TYPES.H1}
               >
-                {component.text || 'Heading 1'}
-              </div>
+                {component.text || (component.type === COMPONENT_TYPES.H1 ? 'Heading 1' : 'Heading 2')}
+              </EditableHeading>
             ) : (
-              <h1
+              <StyledHeading
                 onClick={() => setEditingIndex({ section, index, columnIndex })}
-                className={`${component.className || 'text-4xl font-bold leading-normal m-0'} p-1 border-none shadow-none whitespace-pre-wrap`}
+                isH1={component.type === COMPONENT_TYPES.H1}
               >
-                {component.text || 'Heading 1'}
-              </h1>
+                {component.text || (component.type === COMPONENT_TYPES.H1 ? 'Heading 1' : 'Heading 2')}
+              </StyledHeading>
             )}
-          </div>
-        )}
-
-        {component.type === COMPONENT_TYPES.H2 && (
-          <div className="relative">
-            {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? (
-              <div
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={(e) => {
-                  handleTextChange({ target: { value: e.target.innerText } }, section, index, columnIndex);
-                  setEditingIndex({ section: null, index: null, columnIndex: null });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.target.blur();
-                  }
-                }}
-                className="text-3xl font-bold leading-normal m-0 p-1 outline-none border border-gray-300"
-              >
-                {component.text || 'Heading 2'}
-              </div>
-            ) : (
-              <h2
-                onClick={() => setEditingIndex({ section, index, columnIndex })}
-                className={`${component.className || 'text-3xl font-bold leading-normal m-0'} p-1 border-none shadow-none whitespace-pre-wrap`}
-              >
-                {component.text || 'Heading 2'}
-              </h2>
-            )}
-          </div>
+          </HeadingWrapper>
         )}
 
         {component.type === COMPONENT_TYPES.BUTTON && (
-          <div className="p-2 group border border-transparent flex justify-between items-center transition-all duration-300 ease-in-out hover:border-dashed hover:border-gray-400">
-            <a
-
+          <ButtonWrapper>
+            <ButtonLink
               href={`mailto:${emailData[section]?.[index]?.email || ''}`}
-              className="flex items-center text-black no-underline capitalize rounded-lg text-sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <div
-                className="rounded-md p-1 h-7 w-7 text-black border border-transparent mr-2 flex items-center justify-center"
-                style={{
-                  border: component.backgroundColor === '#ffffff' ? 'none' : '0.75px solid #919EAB',
-                  backgroundColor: component.backgroundColor || emailData[section]?.[index]?.backgroundColor || '#F4F6F8',
-                }}
-              >
+              <ButtonIcon backgroundColor={component.backgroundColor || emailData[section]?.[index]?.backgroundColor}>
                 <Icon icon="mdi:plus" width="24" height="24" />
-              </div>
-              <span className="text-gray-900 text-sm font-normal leading-5">
+              </ButtonIcon>
+              <ButtonText>
                 {emailData[section]?.[index]?.buttonText || component.text || 'Contact me'}
-              </span>
-            </a>
+              </ButtonText>
+            </ButtonLink>
 
-            <div className="flex">
-              <button
+            <ButtonControls>
+              <ControlButton
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className="bg-gray-100 rounded-md w-14 h-7 p-1 gap-2 text-black mr-2 flex items-center justify-center"
               >
                 <Icon
                   onClick={(e) => {
@@ -685,91 +803,80 @@ const DragDropEditor = () => {
                   style={iconStyle(isHovered)}
                 />
                 <Icon onClick={(e) => handleClose(e, section, index, columnIndex)} icon="ic:baseline-close" width="20" height="20" />
-              </button>
-            </div>
-          </div>
-        )
-        }
+              </ControlButton>
+            </ButtonControls>
+          </ButtonWrapper>
+        )}
 
-
-
-        {
-          component.type === COMPONENT_TYPES.TWO_COLUMN && (
-            <Box
-              key={component.id}
-              className="flex justify-between min-h-[200px] border border-gray-300 rounded mb-2.5 relative"
-            >
-              {(component.columns || [[], []]).map((column, colIndex) => (
-                <Box
-                  key={`${component.id}-col-${colIndex}`}
-                  className="flex-1 p-1 border border-gray-300 rounded-md min-h-full flex flex-col"
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const columnRect = e.currentTarget.getBoundingClientRect();
-                    setActiveColumn({
-                      left: columnRect.left,
-                      top: columnRect.top,
-                      width: columnRect.width,
-                      height: columnRect.height,
-                    });
-                    setMousePosition({ x: e.clientX, y: e.clientY });
-                    setShowHr(true);
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setActiveColumn(null);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDrop(e, section, index, colIndex);
-                    setActiveColumn(null);
-                    setShowHr(false);
-                    setIsDragging(false);
-                  }}
-                >
-                  {(column || []).map((nestedComponent, nestedIndex) =>
-                    renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
-                  )}
-                </Box>
-              ))}
-            </Box>
-          )
-        }
-
-        {
-          component.type === COMPONENT_TYPES.ONE_COLUMN && (
-            <Box
-              key={component.id}
-              className="border border-gray-300 rounded mb-2.5 p-2.5"
-            >
-              <Box
+        {component.type === COMPONENT_TYPES.TWO_COLUMN && (
+          <TwoColumnWrapper>
+            {(component.columns || [[], []]).map((column, colIndex) => (
+              <ColumnWrapper
+                key={`${component.id}-col-${colIndex}`}
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  const columnRect = e.currentTarget.getBoundingClientRect();
+                  setActiveColumn({
+                    left: columnRect.left,
+                    top: columnRect.top,
+                    width: columnRect.width,
+                    height: columnRect.height,
+                  });
+                  setMousePosition({ x: e.clientX, y: e.clientY });
+                  setShowHr(true);
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveColumn(null);
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onDrop(e, section, index, 0);
+                  onDrop(e, section, index, colIndex);
+                  setActiveColumn(null);
+                  setShowHr(false);
+                  setIsDragging(false);
                 }}
-                className="min-h-[100px]"
               >
-                {(component.content || []).map((nestedComponent, nestedIndex) =>
-                  renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
+                {(column || []).map((nestedComponent, nestedIndex) =>
+                  renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
                 )}
-              </Box>
-            </Box>
-          )
-        }
-      </div >
+              </ColumnWrapper>
+            ))}
+          </TwoColumnWrapper>
+        )}
+
+        {component.type === COMPONENT_TYPES.ONE_COLUMN && (
+          <OneColumnWrapper>
+            <OneColumnContent
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDrop(e, section, index, 0);
+              }}
+            >
+              {(component.content || []).map((nestedComponent, nestedIndex) =>
+                renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
+              )}
+            </OneColumnContent>
+          </OneColumnWrapper>
+        )}
+      </ComponentWrapper>
     );
   }, [components, editingIndex, emailData, handleClose, handleOpenModal, handleTextChange, setEditingIndex]);
-
-  // ... (other functions remain the same)
+ function updateSidebarPosition(newPosition) {
+    setEditorState(prevState => ({
+      ...prevState,
+      sidebarPosition: newPosition
+    }));
+  }
 
   return (
     <Container>
@@ -804,11 +911,14 @@ const DragDropEditor = () => {
 
       {sidebarOpen && (
         <Sidebar
-          sidebarPosition={sidebarPosition}
-          setSidebarPosition={setSidebarPosition}
-          toggleSidebar={() => setSidebarOpen(false)}
-          COMPONENT_TYPES={COMPONENT_TYPES}
-        />
+        sidebarPosition={editorState.sidebarPosition}
+        setSidebarPosition={updateSidebarPosition}
+        toggleSidebar={() => setEditorState(prevState => ({
+          ...prevState,
+          sidebarOpen: !prevState.sidebarOpen
+        }))}
+        COMPONENT_TYPES={COMPONENT_TYPES}
+      />
       )}
       <EmailModal
         open={modalOpen}
