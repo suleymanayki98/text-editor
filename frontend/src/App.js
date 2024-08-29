@@ -2,7 +2,6 @@ import React from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import DragDropEditor from './components/DragDropEditor';
-import './index.css';
 
 const theme = createTheme({
   // Burada özel tema ayarlarınızı yapabilirsiniz

@@ -28,29 +28,37 @@ const ComponentWrapper = styled.div`
 const DragDropEditor = () => {
   const [components, setComponents] = useState({ description: [], about: [] });
   const [sourceCode, setSourceCode] = useState({ description: '', about: '' });
-  const [showSource, setShowSource] = useState(false);
-  const [undoStack, setUndoStack] = useState([]);
-  const [editingIndex, setEditingIndex] = useState({ section: null, index: null });
-  const [redoStack, setRedoStack] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [draggingIndex, setDraggingIndex] = useState(null);
-  const [emailIndex, setEmailIndex] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [emailData, setEmailData] = useState({});
-  const [currentEmailData, setCurrentEmailData] = useState({});
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [showHr, setShowHr] = useState(false);
-  const [draggableArea, setDraggableArea] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [editorBounds, setEditorBounds] = useState(null);
-  const [activeColumn, setActiveColumn] = useState(null);
-  const [isDraggingComponent, setIsDraggingComponent] = useState(false);
-  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
-
-  const [editorState, setEditorState] = useState({
-    mousePosition: { x: 0, y: 0 },
-    sidebarPosition: { x: 0, y: 0 },
+  const [undoRedoState, setUndoRedoState] = useState({
+    undoStack: [],
+    redoStack: [],
   });
+  const [editingState, setEditingState] = useState({
+    editingIndex: { section: null, index: null },
+    draggingIndex: null,
+  });
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    emailIndex: null,
+    currentEmailData: {},
+  });
+ 
+  const [dragState, setDragState] = useState({
+    isDragging: false,
+    showHr: false,
+    mousePosition: { x: 0, y: 0 },
+    draggableArea: null,
+    editorBounds: null,
+    activeColumn: null,
+    isDraggingComponent: false,
+    sidebarPosition: { x: 0, y: 0 }, // Initialize with default values
+  });
+  const [uiState, setUiState] = useState({
+    sidebarOpen: false,
+    showSource: false,
+  });
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+  const [emailData, setEmailData] = useState({});
+  
 
   const iconStyle = (hover) => ({
     color: hover ? '#015FFB' : 'black',
@@ -65,21 +73,26 @@ const DragDropEditor = () => {
     const editorElement = document.getElementById('editor-area');
     if (editorElement) {
       const bounds = editorElement.getBoundingClientRect();
-      setEditorBounds(bounds);
+      setDragState(prevState => ({ ...prevState, editorBounds: bounds }));
     }
   }, []);
 
   useEffect(() => {
     const handleMouseMove = (event) => {
-      setMousePosition({ x: event.clientX, y: event.clientY });
+      setDragState(prevState => ({ ...prevState, mousePosition: { x: event.clientX, y: event.clientY } }));
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
+  const updateUndoRedoState = (newState) => {
+    setUndoRedoState(prevState => ({ ...prevState, ...newState }));
+  };
+  const updateEditingState = (newState) => {
+    setEditingState(prevState => ({ ...prevState, ...newState }));
+  };
 
   const showToast = (message, severity = 'success') => {
     setToast({ open: true, message, severity });
@@ -110,8 +123,11 @@ const DragDropEditor = () => {
   };
 
   const updateComponents = (newComponents) => {
-    setUndoStack([...undoStack, components]);
-    setRedoStack([]);
+    setUndoRedoState(prevState => ({
+      ...prevState,
+      undoStack: [...prevState.undoStack, components],
+      redoStack: []
+    }));
     setComponents(newComponents);
     const newSourceCode = updateSourceCode(newComponents);
     BackendService.saveComponentsToJson(newSourceCode.description)
@@ -121,34 +137,51 @@ const DragDropEditor = () => {
   };
 
   const clearEditor = () => {
-    // Bileşenleri boşalt
     setComponents({
       description: [],
       about: []
     });
 
-    // Kaynak kodunu boşalt
     setSourceCode({
       description: '',
       about: ''
     });
 
-    // Geri alma ve ileri alma yığınlarını temizle
-    setUndoStack([]);
-    setRedoStack([]);
+    setUndoRedoState({
+      undoStack: [],
+      redoStack: []
+    });
 
-    // Düzenleme indeksini sıfırla
-    setEditingIndex({ section: null, index: null, columnIndex: null });
+    setEditingState(prevState => ({
+      ...prevState,
+      editingIndex: { section: null, index: null, columnIndex: null }
+    }));
 
-    // Kaydedilen JSON'ı da temizle
     BackendService.saveComponentsToJson('');
   };
+  const updateDragState = useCallback((newState) => {
+    setDragState(prevState => ({
+      ...prevState,
+      ...(typeof newState === 'function' ? newState(prevState) : newState)
+    }));
+  }, []);
+
+  const updateModalState = (newState) => {
+    setModalState(prevState => ({ ...prevState, ...newState }));
+  };
+
+  const updateUiState = (newState) => {
+    setUiState(prevState => ({ ...prevState, ...newState }));
+  };
+
   const onDragStart = (e, section, index, columnIndex) => {
-    setDraggingIndex({ section, index, columnIndex });
+    updateEditingState({ draggingIndex: { section, index, columnIndex } });
     e.dataTransfer.setData('text/plain', JSON.stringify({ section, index, columnIndex }));
-    setIsDragging(true);
-    setShowHr(true);
-    setIsDraggingComponent(true);  // Yeni eklenen satır
+    updateDragState({
+      isDragging: true,
+      showHr: true,
+      isDraggingComponent: true
+    });
   };
 
   
@@ -183,14 +216,18 @@ const DragDropEditor = () => {
 
   const handleOpenModal = (section, index) => {
     const currentData = emailData[section]?.[index] || {};
-    setCurrentEmailData(currentData);
-    setEmailIndex({ section, index });
-    setModalOpen(true);
+    updateModalState({
+      isOpen: true,
+      emailIndex: { section, index },
+      currentEmailData: currentData,
+    });
   };
 
   const handleCloseModal = () => {
-    setModalOpen(false);
-    setCurrentEmailData({});
+    updateModalState({
+      isOpen: false,
+      currentEmailData: {},
+    });
   };
 
   const parseComponents = (code, section) => {
@@ -268,9 +305,11 @@ const DragDropEditor = () => {
       [section]: newComponents
     }));
 
-    // Update the undo stack
-    setUndoStack(prevUndoStack => [...prevUndoStack, components]);
-    setRedoStack([]);
+    // Update the undo/redo state
+    setUndoRedoState(prevState => ({
+      undoStack: [...prevState.undoStack, components],
+      redoStack: []
+    }));
   };
 
   const updateSourceCode = (updatedComponents) => {
@@ -318,10 +357,10 @@ const DragDropEditor = () => {
 
   const onDragOver = (e) => {
     e.preventDefault();
-    if (!isDraggingComponent) {  // Yeni eklenen kontrol
-      setShowHr(true);
+    if (!dragState.isDraggingComponent) {
+      updateDragState({ showHr: true });
     }
-    setMousePosition({ x: e.clientX, y: e.clientY });
+    updateDragState({ mousePosition: { x: e.clientX, y: e.clientY } });
   };
   const DragIndicator = ({ mousePosition, show, editorBounds, isDragging, activeColumn, isDraggingComponent }) => {
     if (!show || !editorBounds || (!isDragging && !isDraggingComponent)) return null;
@@ -358,9 +397,11 @@ const DragDropEditor = () => {
 
 
   const onDragEnd = () => {
-    setShowHr(false);
-    setIsDragging(false);
-    setIsDraggingComponent(false);  // Yeni eklenen satır
+    updateDragState({
+      showHr: false,
+      isDragging: false,
+      isDraggingComponent: false
+    });
   };
 
   
@@ -432,48 +473,51 @@ const DragDropEditor = () => {
   // Main onDrop function
   const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
     e.preventDefault();
-    setShowHr(false);
-    setIsDragging(false);
-  
+    updateDragState({
+      showHr: false,
+      isDragging: false,
+    });
+
     const type = e.dataTransfer.getData('type');
     const id = e.dataTransfer.getData('id');
-  
+
     const newComponents = JSON.parse(JSON.stringify(components));
-  
+
     if (type && id) {
       const newComponent = createNewComponent(type, id);
       insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent);
-    } else if (draggingIndex) {
-      const draggedComponent = removeComponent(newComponents, draggingIndex.section, draggingIndex.index, draggingIndex.columnIndex);
+    } else if (editingState.draggingIndex) {
+      const draggedComponent = removeComponent(newComponents, editingState.draggingIndex.section, editingState.draggingIndex.index, editingState.draggingIndex.columnIndex);
       insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent);
     }
-  
-    updateComponents(newComponents);
-    setDraggingIndex(null);
-  }, [components, draggingIndex, updateComponents]);
 
+    updateComponents(newComponents);
+    updateEditingState({ draggingIndex: null });
+  }, [components, editingState.draggingIndex]);
   const undo = () => {
-    if (undoStack.length === 0) return;
-    const previousComponents = undoStack.pop();
-    setRedoStack([...redoStack, components]);
+    if (undoRedoState.undoStack.length === 0) return;
+    const previousComponents = undoRedoState.undoStack[undoRedoState.undoStack.length - 1];
+    setUndoRedoState(prevState => ({
+      undoStack: prevState.undoStack.slice(0, -1),
+      redoStack: [...prevState.redoStack, components]
+    }));
     setComponents(previousComponents);
     updateSourceCode(previousComponents);
   };
 
 
   const handleSaveEmailData = () => {
-    const { section, index } = emailIndex;
+    const { section, index } = modalState.emailIndex;
     const newEmailData = { ...emailData };
     if (!newEmailData[section]) {
       newEmailData[section] = {};
     }
-    newEmailData[section][index] = currentEmailData;
+    newEmailData[section][index] = modalState.currentEmailData;
     setEmailData(newEmailData);
 
-    // Komponenti güncelle
     const newComponents = JSON.parse(JSON.stringify(components));
     if (newComponents[section] && newComponents[section][index]) {
-      newComponents[section][index].backgroundColor = currentEmailData.backgroundColor;
+      newComponents[section][index].backgroundColor = modalState.currentEmailData.backgroundColor;
     }
     setComponents(newComponents);
 
@@ -488,16 +532,18 @@ const DragDropEditor = () => {
   };
 
   const handleEmailDataChange = (field, value) => {
-    setCurrentEmailData(prevData => ({
-      ...prevData,
-      [field]: value
-    }));
+    updateModalState({
+      currentEmailData: { ...modalState.currentEmailData, [field]: value }
+    });
   };
 
   const redo = () => {
-    if (redoStack.length === 0) return;
-    const nextComponents = redoStack.pop();
-    setUndoStack([...undoStack, components]);
+    if (undoRedoState.redoStack.length === 0) return;
+    const nextComponents = undoRedoState.redoStack[undoRedoState.redoStack.length - 1];
+    setUndoRedoState(prevState => ({
+      undoStack: [...prevState.undoStack, components],
+      redoStack: prevState.redoStack.slice(0, -1)
+    }));
     setComponents(nextComponents);
     updateSourceCode(nextComponents);
   };
@@ -521,13 +567,12 @@ const DragDropEditor = () => {
       newComponents[section][index].text = e.target.value;
     }
     updateComponents(newComponents);
-  }, [components, updateComponents]);
-
+  }, [components]);
   const renderComponent = useCallback((component, section, index, columnIndex) => {
-    const isDragging = draggingIndex &&
-      draggingIndex.section === section &&
-      draggingIndex.index === index &&
-      draggingIndex.columnIndex === columnIndex;
+    const isDragging = editingState.draggingIndex &&
+      editingState.draggingIndex.section === section &&
+      editingState.draggingIndex.index === index &&
+      editingState.draggingIndex.columnIndex === columnIndex;
 
     return (
       <ComponentWrapper
@@ -536,20 +581,20 @@ const DragDropEditor = () => {
         isDragging={isDragging}
         onDragStart={(e) => {
           onDragStart(e, section, index, columnIndex);
-          setShowHr(true);
+          setDragState(prevState => ({ ...prevState, showHr: true }));
         }}
         onDragEnd={onDragEnd}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
           const rect = e.currentTarget.getBoundingClientRect();
-          setDraggableArea(rect);
+          setDragState(prevState => ({ ...prevState, draggableArea: rect }));
           onDragOver(e, section, index, columnIndex);
         }}
         onDragLeave={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setDraggableArea(null);
+          setDragState(prevState => ({ ...prevState, draggableArea: null }));
         }}
         onDrop={(e) => {
           e.stopPropagation();
@@ -563,8 +608,8 @@ const DragDropEditor = () => {
             section={section}
             index={index}
             columnIndex={columnIndex}
-            editingIndex={editingIndex}
-            setEditingIndex={setEditingIndex}
+            editingIndex={editingState.editingIndex}
+            setEditingIndex={(newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex }))}
             handleTextChange={handleTextChange}
           />
         )}
@@ -575,8 +620,8 @@ const DragDropEditor = () => {
             section={section}
             index={index}
             columnIndex={columnIndex}
-            editingIndex={editingIndex}
-            setEditingIndex={setEditingIndex}
+            editingIndex={editingState.editingIndex}
+            setEditingIndex={(newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex }))}
             handleTextChange={handleTextChange}
           />
         )}
@@ -586,8 +631,8 @@ const DragDropEditor = () => {
             section={section}
             index={index}
             columnIndex={columnIndex}
-            editingIndex={editingIndex}
-            setEditingIndex={setEditingIndex}
+            editingIndex={editingState.editingIndex}
+            setEditingIndex={(newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex }))}
             handleTextChange={handleTextChange}
           />
         )}
@@ -610,10 +655,10 @@ const DragDropEditor = () => {
             section={section}
             index={index}
             onDrop={onDrop}
-            setActiveColumn={setActiveColumn}
-            setMousePosition={setMousePosition}
-            setShowHr={setShowHr}
-            setIsDragging={setIsDragging}
+            setActiveColumn={(column) => setDragState(prevState => ({ ...prevState, activeColumn: column }))}
+            setMousePosition={(position) => setDragState(prevState => ({ ...prevState, mousePosition: position }))}
+            setShowHr={(show) => setDragState(prevState => ({ ...prevState, showHr: show }))}
+            setIsDragging={(dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging }))}
             renderComponent={renderComponent}
           />
         )}
@@ -623,21 +668,21 @@ const DragDropEditor = () => {
             component={component}
             section={section}
             index={index}
-            setActiveColumn={setActiveColumn}
-            setIsDragging={setIsDragging}
-            setMousePosition={setMousePosition}
-            setShowHr={setShowHr}
+            setActiveColumn={(column) => setDragState(prevState => ({ ...prevState, activeColumn: column }))}
+            setIsDragging={(dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging }))}
+            setMousePosition={(position) => setDragState(prevState => ({ ...prevState, mousePosition: position }))}
+            setShowHr={(show) => setDragState(prevState => ({ ...prevState, showHr: show }))}
             onDrop={onDrop}
             renderComponent={renderComponent}
           />
         )}
       </ComponentWrapper>
     );
-  }, [components, editingIndex, emailData, handleClose, handleOpenModal, handleTextChange, setEditingIndex, onDragStart, onDragEnd, onDragOver, onDrop]);
+  }, [editingState, onDragStart, onDragEnd, onDragOver, onDrop, handleTextChange, handleOpenModal, handleClose, emailData]);
 
  
   function updateSidebarPosition(newPosition) {
-    setEditorState(prevState => ({
+    setDragState(prevState => ({
       ...prevState,
       sidebarPosition: newPosition
     }));
@@ -651,51 +696,53 @@ const DragDropEditor = () => {
         </Alert>
       </Snackbar>
       <Toolbar
-        toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        sidebarOpen={sidebarOpen}
+        toggleSidebar={() => updateUiState({ sidebarOpen: !uiState.sidebarOpen })}
+        sidebarOpen={uiState.sidebarOpen}
         undo={undo}
         redo={redo}
-        undoStack={undoStack}
-        redoStack={redoStack}
-        showSource={showSource}
-        setShowSource={setShowSource}
+        undoStack={undoRedoState.undoStack}
+        redoStack={undoRedoState.redoStack}
+        showSource={uiState.showSource}
+        setShowSource={(show) => updateUiState({ showSource: show })}
       />
       <Box display="flex" flexDirection="column">
         <EditorArea
           components={components}
-          showSource={showSource}
+          showSource={uiState.showSource}
           sourceCode={sourceCode}
           handleSourceCodeChange={handleSourceCodeChange}
           onDragOver={onDragOver}
           onDrop={onDrop}
           renderComponent={renderComponent}
           clearEditor={clearEditor}
-          setEditorBounds={setEditorBounds}
+          setEditorBounds={(bounds) => updateDragState({ editorBounds: bounds })}
         />
       </Box>
-
-      {sidebarOpen && (
+      {uiState.sidebarOpen && (
         <Sidebar
-        sidebarPosition={editorState.sidebarPosition}
-        setSidebarPosition={updateSidebarPosition}
-        toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        COMPONENT_TYPES={COMPONENT_TYPES}
-      />
+          sidebarPosition={dragState.sidebarPosition}
+          setSidebarPosition={(position) => setDragState(prevState => ({
+            ...prevState,
+            sidebarPosition: position
+          }))}
+          toggleSidebar={() => setUiState(prevState => ({ ...prevState, sidebarOpen: !prevState.sidebarOpen }))}
+          COMPONENT_TYPES={COMPONENT_TYPES}
+        />
       )}
       <EmailModal
-        open={modalOpen}
+        open={modalState.isOpen}
         onClose={handleCloseModal}
-        currentEmailData={currentEmailData}
+        currentEmailData={modalState.currentEmailData}
         onSave={handleSaveEmailData}
         onChange={handleEmailDataChange}
       />
-       <DragIndicator
-        mousePosition={mousePosition}
-        show={showHr}
-        editorBounds={editorBounds}
-        isDragging={isDragging}
-        activeColumn={activeColumn}
-        isDraggingComponent={isDraggingComponent}
+      <DragIndicator
+        mousePosition={dragState.mousePosition}
+        show={dragState.showHr}
+        editorBounds={dragState.editorBounds}
+        isDragging={dragState.isDragging}
+        activeColumn={dragState.activeColumn}
+        isDraggingComponent={dragState.isDraggingComponent}
       />
     </Container>
   );

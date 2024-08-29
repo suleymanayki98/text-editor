@@ -54,6 +54,7 @@ const ControlButton = styled.button`
   background-color: #f3f4f6;
   border-radius: 0.375rem;
   width: 3.5rem;
+  border: none;
   height: 1.75rem;
   padding: 0.25rem;
   gap: 0.5rem;
@@ -62,6 +63,7 @@ const ControlButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 `;
 
 const ButtonComponent = ({ component, section, index, columnIndex, emailData, handleOpenModal, handleClose }) => {

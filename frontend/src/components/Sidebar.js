@@ -23,6 +23,8 @@ const Handle = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 32px;
+  margin-top: 5px;
 `;
 
 const Title = styled.p`
@@ -57,7 +59,8 @@ const SectionTitle = styled.p`
   line-height: 22px;
   width: 228px;
   height: 22px;
-  margin-bottom: 0.125rem; /* 10px */
+  margin-bottom: 0.125rem;
+  margin-top: 0;
 `;
 
 const Button = styled.button`

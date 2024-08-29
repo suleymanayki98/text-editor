@@ -1,5 +1,5 @@
 // EditorArea.js
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { Box, IconButton, Typography } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ComponentRenderer from './ComponentRenderer';
@@ -57,12 +57,17 @@ const EditorArea = ({
 }) => {
   const editorRef = useRef(null);
 
-  useEffect(() => {
+  const updateEditorBounds = useCallback(() => {
     if (editorRef.current) {
       const bounds = editorRef.current.getBoundingClientRect();
-      setEditorBounds(bounds);
+      setEditorBounds(prevBounds => {
+        if (JSON.stringify(bounds) !== JSON.stringify(prevBounds)) {
+          return bounds;
+        }
+        return prevBounds;
+      });
     }
-  }, [setEditorBounds]);
+  }, []);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sourceCode.description).then(() => {
@@ -84,12 +89,14 @@ const EditorArea = ({
               position: 'absolute',
               top: 8,
               right: 8,
+              backgroundColor: '#E3F3FF',
+              borderRadius: '6px',
             }}
           >
             <Icon
               icon="ic:baseline-close"
-              width="24"
-              height="24"
+              width="20"
+              height="20"
             />
           </IconButton>
         )}
