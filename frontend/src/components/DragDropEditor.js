@@ -1,15 +1,13 @@
-// DragDropEditor.js (updated imports)
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Box, Container } from '@mui/material';
 import Sidebar from './Sidebar';
-import { IconButton, Typography, TextField, Button } from '@mui/material';
 import EditorArea from './EditorArea';
 import Toolbar from './Toolbar';
 import EmailModal from './EmailModal';
 import * as BackendService from './BackendService';
 import { Snackbar, Alert } from '@mui/material';
-import { COMPONENT_TYPES } from './constants';
+import { COMPONENT_TYPES, elementConfig } from './constants';
 import ParagraphComponent from './elements/ParagraphComponent';
 import HeadingComponent from './elements/HeadingComponent';
 import HeadingComponent2 from './elements/HeadingComponent2';
@@ -46,7 +44,7 @@ const DragDropEditor = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [editorBounds, setEditorBounds] = useState(null);
   const [activeColumn, setActiveColumn] = useState(null);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isDraggingComponent, setIsDraggingComponent] = useState(false);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   const [editorState, setEditorState] = useState({
@@ -150,7 +148,10 @@ const DragDropEditor = () => {
     e.dataTransfer.setData('text/plain', JSON.stringify({ section, index, columnIndex }));
     setIsDragging(true);
     setShowHr(true);
+    setIsDraggingComponent(true);  // Yeni eklenen satır
   };
+
+  
 
   const loadComponents = async () => {
     try {
@@ -317,11 +318,13 @@ const DragDropEditor = () => {
 
   const onDragOver = (e) => {
     e.preventDefault();
-    setShowHr(true);
+    if (!isDraggingComponent) {  // Yeni eklenen kontrol
+      setShowHr(true);
+    }
     setMousePosition({ x: e.clientX, y: e.clientY });
   };
-  const DragIndicator = ({ mousePosition, show, editorBounds, isDragging, activeColumn }) => {
-    if (!show || !editorBounds || !isDragging) return null;
+  const DragIndicator = ({ mousePosition, show, editorBounds, isDragging, activeColumn, isDraggingComponent }) => {
+    if (!show || !editorBounds || (!isDragging && !isDraggingComponent)) return null;
 
     const isWithinEditor =
       mousePosition.y >= editorBounds.top &&
@@ -332,144 +335,123 @@ const DragDropEditor = () => {
     if (!isWithinEditor) return null;
 
     let indicatorStyle = {
+      position: 'fixed',
       left: `${mousePosition.x}px`,
       top: `${mousePosition.y}px`,
       width: '400px',
       height: '4px',
+      backgroundColor: '#0000FF',
+      pointerEvents: 'none',
+      zIndex: 50,
+      transition: 'all 50ms linear',
     };
 
     if (activeColumn) {
       indicatorStyle.left = `${Math.max(activeColumn.left, Math.min(mousePosition.x, activeColumn.left + activeColumn.width - 400))}px`;
-      indicatorStyle.top = `${mousePosition.y}px`;
       if (parseFloat(indicatorStyle.left) + 400 > activeColumn.left + activeColumn.width) {
         indicatorStyle.width = `${activeColumn.left + activeColumn.width - parseFloat(indicatorStyle.left)}px`;
       }
     }
 
-    return (
-      <div
-        className="fixed bg-blue-500 pointer-events-none z-50 transition-all duration-50 ease-linear"
-        style={indicatorStyle}
-      />
-    );
+    return <div style={indicatorStyle} />;
   };
 
 
   const onDragEnd = () => {
     setShowHr(false);
     setIsDragging(false);
+    setIsDraggingComponent(false);  // Yeni eklenen satır
   };
 
+  
+  // Helper functions
+  const createNewComponent = (type, id) => ({
+    type,
+    id,
+    ...elementConfig[type]
+  });
+  
+  const removeComponent = (components, section, index, columnIndex) => {
+    if (columnIndex !== undefined) {
+      const indices = index.toString().split('-').map(Number);
+      let current = components[section];
+      for (let i = 0; i < indices.length - 1; i++) {
+        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+          current = current[indices[i]].columns[columnIndex];
+        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+          current = current[indices[i]].content;
+        } else {
+          current = current[indices[i]];
+        }
+      }
+      return current.splice(indices[indices.length - 1], 1)[0];
+    } else {
+      return components[section].splice(index, 1)[0];
+    }
+  };
+  
+  const insertComponent = (components, section, index, columnIndex, component) => {
+    if (columnIndex !== undefined) {
+      const indices = index.toString().split('-').map(Number);
+      let current = components[section];
+      for (let i = 0; i < indices.length; i++) {
+        if (i === indices.length - 1) {
+          if (!current[indices[i]]) {
+            if (current.type === COMPONENT_TYPES.ONE_COLUMN) {
+              current.content.push(component);
+            } else {
+              current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
+              current[indices[i]].columns[columnIndex].push(component);
+            }
+          } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+            current[indices[i]].content.push(component);
+          } else {
+            if (!current[indices[i]].columns) {
+              current[indices[i]].columns = [[], []];
+            }
+            current[indices[i]].columns[columnIndex].push(component);
+          }
+          return;
+        }
+        if (!current[indices[i]]) {
+          current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
+        }
+        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+          current = current[indices[i]].columns[columnIndex];
+        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+          current = current[indices[i]].content;
+        } else {
+          current = current[indices[i]];
+        }
+      }
+    } else {
+      components[section].splice(index, 0, component);
+    }
+  };
+  
+  // Main onDrop function
   const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
     e.preventDefault();
     setShowHr(false);
     setIsDragging(false);
+  
     const type = e.dataTransfer.getData('type');
     const id = e.dataTransfer.getData('id');
-
+  
     const newComponents = JSON.parse(JSON.stringify(components));
-
-    const insertComponent = (components, index, columnIndex, component) => {
-      // Yeni eklenen veya taşınan bileşen için stilleri koru
-      if (component.type === COMPONENT_TYPES.H1 || component.type === COMPONENT_TYPES.H2) {
-        component.className = component.type === COMPONENT_TYPES.H1
-          ? "text-4xl font-bold leading-normal m-0"
-          : "text-3xl font-bold leading-normal m-0";
-      }
-
-      if (columnIndex !== undefined) {
-        const indices = index.toString().split('-').map(Number);
-        let current = components;
-
-        for (let i = 0; i < indices.length; i++) {
-          if (i === indices.length - 1) {
-            if (!current[indices[i]]) {
-              if (current.type === COMPONENT_TYPES.ONE_COLUMN) {
-                current.content.push(component);
-              } else {
-                current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
-                current[indices[i]].columns[columnIndex].push(component);
-              }
-            } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
-              current[indices[i]].content.push(component);
-            } else {
-              if (!current[indices[i]].columns) {
-                current[indices[i]].columns = [[], []];
-              }
-              current[indices[i]].columns[columnIndex].push(component);
-            }
-            return;
-          }
-
-          if (!current[indices[i]]) {
-            current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
-          }
-
-          if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
-            current = current[indices[i]].columns[columnIndex];
-          } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
-            current = current[indices[i]].content;
-          } else {
-            current = current[indices[i]];
-          }
-        }
-      } else {
-        components.splice(index, 0, component);
-      }
-    };
-
-
+  
     if (type && id) {
-      // New component being added
-      const newComponent = { type, id };
-      if (type === COMPONENT_TYPES.PARAGRAPH) {
-        newComponent.text = "I'am a text. Click here to add your own text and edit me. It's easy";
-      }
-      if (type === COMPONENT_TYPES.H1) {
-        newComponent.text = 'Heading1';
-      }
-      if (type === COMPONENT_TYPES.H2) {
-        newComponent.text = 'Heading2';
-      }
-      if (type === COMPONENT_TYPES.TWO_COLUMN) {
-        newComponent.columns = [[], []];
-      }
-      if (type === COMPONENT_TYPES.ONE_COLUMN) {
-        newComponent.content = [];
-      }
-
-      insertComponent(newComponents[targetSection], targetIndex, targetColumnIndex, newComponent);
+      const newComponent = createNewComponent(type, id);
+      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent);
     } else if (draggingIndex) {
-      // Existing component being moved
-      let draggedComponent;
-
-      const removeComponent = (components, index, columnIndex) => {
-        if (columnIndex !== undefined) {
-          const indices = index.toString().split('-').map(Number);
-          let current = components;
-          for (let i = 0; i < indices.length - 1; i++) {
-            if (columnIndex !== undefined && current[indices[i]].columns) {
-              current = current[indices[i]].columns[columnIndex];
-            } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
-              current = current[indices[i]].content;
-            } else {
-              current = current[indices[i]];
-            }
-          }
-          draggedComponent = current.splice(indices[indices.length - 1], 1)[0];
-        } else {
-          draggedComponent = components.splice(index, 1)[0];
-        }
-      };
-
-      removeComponent(newComponents[draggingIndex.section], draggingIndex.index, draggingIndex.columnIndex);
-
-      insertComponent(newComponents[targetSection], targetIndex, targetColumnIndex, draggedComponent);
+      const draggedComponent = removeComponent(newComponents, draggingIndex.section, draggingIndex.index, draggingIndex.columnIndex);
+      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent);
     }
-
+  
     updateComponents(newComponents);
     setDraggingIndex(null);
   }, [components, draggingIndex, updateComponents]);
+
   const undo = () => {
     if (undoStack.length === 0) return;
     const previousComponents = undoStack.pop();
@@ -519,6 +501,7 @@ const DragDropEditor = () => {
     setComponents(nextComponents);
     updateSourceCode(nextComponents);
   };
+
   const handleTextChange = useCallback((e, section, index, columnIndex) => {
     const newComponents = JSON.parse(JSON.stringify(components));
     if (columnIndex !== undefined) {
@@ -640,6 +623,10 @@ const DragDropEditor = () => {
             component={component}
             section={section}
             index={index}
+            setActiveColumn={setActiveColumn}
+            setIsDragging={setIsDragging}
+            setMousePosition={setMousePosition}
+            setShowHr={setShowHr}
             onDrop={onDrop}
             renderComponent={renderComponent}
           />
@@ -702,12 +689,13 @@ const DragDropEditor = () => {
         onSave={handleSaveEmailData}
         onChange={handleEmailDataChange}
       />
-      <DragIndicator
+       <DragIndicator
         mousePosition={mousePosition}
         show={showHr}
         editorBounds={editorBounds}
         isDragging={isDragging}
         activeColumn={activeColumn}
+        isDraggingComponent={isDraggingComponent}
       />
     </Container>
   );

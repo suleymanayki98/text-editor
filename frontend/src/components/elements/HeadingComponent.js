@@ -1,4 +1,3 @@
-// components/HeadingComponent.js
 import React from 'react';
 import styled from 'styled-components';
 
@@ -16,7 +15,9 @@ const EditableHeading = styled.div`
   outline: none;
 `;
 
-const StyledHeading = styled(props => props.isH1 ? 'h1' : 'h2')`
+const StyledHeading = styled(({ isH1, ...props }) => 
+  isH1 ? <h1 {...props} /> : <h2 {...props} />
+)`
   font-size: ${props => props.isH1 ? '2.25rem' : '1.875rem'};
   font-weight: bold;
   line-height: 1.2;
@@ -32,34 +33,34 @@ const HeadingComponent = ({ component, section, index, columnIndex, editingIndex
   const isH1 = component.type === 'h1';
 
   return (
-    <div className="relative">
-    {editingIndex.section === section && editingIndex.index === index && editingIndex.columnIndex === columnIndex ? (
-      <div
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          handleTextChange({ target: { value: e.target.innerText } }, section, index, columnIndex);
-          setEditingIndex({ section: null, index: null, columnIndex: null });
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            e.target.blur();
-          }
-        }}
-        className="text-4xl font-bold leading-normal m-0 p-1 border border-gray-300 outline-none"
-      >
-        {component.text || 'Heading 1'}
-      </div>
-    ) : (
-      <h1
-        onClick={() => setEditingIndex({ section, index, columnIndex })}
-        className={`${component.className || 'text-4xl font-bold leading-normal m-0'} p-1 border-none shadow-none whitespace-pre-wrap`}
-      >
-        {component.text || 'Heading 1'}
-      </h1>
-    )}
-  </div>
+    <HeadingWrapper>
+      {isEditing ? (
+        <EditableHeading
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            handleTextChange({ target: { value: e.target.innerText } }, section, index, columnIndex);
+            setEditingIndex({ section: null, index: null, columnIndex: null });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.target.blur();
+            }
+          }}
+          isH1={isH1}
+        >
+          {component.text || 'Heading 1'}
+        </EditableHeading>
+      ) : (
+        <StyledHeading
+          onClick={() => setEditingIndex({ section, index, columnIndex })}
+          isH1={isH1}
+        >
+          {component.text || 'Heading 1'}
+        </StyledHeading>
+      )}
+    </HeadingWrapper>
   );
 };
 

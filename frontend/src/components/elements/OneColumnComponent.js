@@ -14,18 +14,29 @@ const OneColumnContent = styled(Box)`
   min-height: 100px;
 `;
 
-const OneColumnComponent = ({ component, section, index, onDrop, renderComponent }) => {
+const OneColumnComponent = ({ component, section, index, setIsDragging, setActiveColumn, setMousePosition, setShowHr, onDrop, renderComponent }) => {
   return (
     <OneColumnWrapper>
       <OneColumnContent
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          setShowHr(true);
+          const columnRect = e.currentTarget.getBoundingClientRect();
+          setActiveColumn({
+            left: columnRect.left,
+            top: columnRect.top,
+            width: columnRect.width,
+            height: columnRect.height,
+          });
+          setIsDragging(true);
+          setMousePosition({ x: e.clientX, y: e.clientY });
         }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
           onDrop(e, section, index, 0);
+          setShowHr(true);
         }}
       >
         {(component.content || []).map((nestedComponent, nestedIndex) =>

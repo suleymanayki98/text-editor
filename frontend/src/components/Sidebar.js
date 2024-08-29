@@ -7,18 +7,16 @@ const SidebarContainer = styled.div`
   position: fixed;
   width: 272px;
   height: 426px;
-  background-color: #F4F6F8; /* Light gray background color */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: #F4F6F8;
   z-index: 50;
-  border-top-right-radius: 1.5rem; /* 24px */
-  border-bottom-right-radius: 1.5rem; /* 24px */
+  border-radius: 1.5rem; /* 24px */
   left: ${({ x }) => x}px;
   top: ${({ y }) => y}px;
 `;
 
 const Handle = styled.div`
   padding: 8px;
-  background-color: #F4F6F8; /* Light gray background color */
+  background-color: #F4F6F8;
   cursor: move;
   position: relative;
   border-top-right-radius: 1.5rem; /* 24px */
