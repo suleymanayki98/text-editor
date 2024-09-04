@@ -376,55 +376,23 @@ const DragDropEditor = () => {
   const onDragOver = useCallback((e, section, index, columnIndex) => {
     e.preventDefault();
     e.stopPropagation();
-
+  
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
     const threshold = rect.height / 2;
-
+  
     setDragIndicator({
       show: true,
       left: rect.left,
       top: mouseY > threshold ? rect.bottom : rect.top,
       width: rect.width,
     });
-
+  
     updateDragState({
       mousePosition: { x: e.clientX, y: e.clientY },
       activeColumn: columnIndex !== undefined ? { left: rect.left, width: rect.width } : null,
     });
   }, []);
-  const DragIndicator = ({ mousePosition, show, editorBounds, isDragging, activeColumn, isDraggingComponent }) => {
-    if (!show || !editorBounds || (!isDragging && !isDraggingComponent)) return null;
-
-    const isWithinEditor =
-      mousePosition.y >= editorBounds.top &&
-      mousePosition.y <= editorBounds.bottom &&
-      mousePosition.x >= editorBounds.left &&
-      mousePosition.x <= editorBounds.right;
-
-    if (!isWithinEditor) return null;
-
-    let indicatorStyle = {
-      position: 'fixed',
-      left: `${mousePosition.x}px`,
-      top: `${mousePosition.y}px`,
-      width: '400px',
-      height: '4px',
-      backgroundColor: '#0000FF',
-      pointerEvents: 'none',
-      zIndex: 50,
-      transition: 'all 50ms linear',
-    };
-
-    if (activeColumn) {
-      indicatorStyle.left = `${Math.max(activeColumn.left, Math.min(mousePosition.x, activeColumn.left + activeColumn.width - 400))}px`;
-      if (parseFloat(indicatorStyle.left) + 400 > activeColumn.left + activeColumn.width) {
-        indicatorStyle.width = `${activeColumn.left + activeColumn.width - parseFloat(indicatorStyle.left)}px`;
-      }
-    }
-
-    return <div style={indicatorStyle} />;
-  };
 
 
   const onDragEnd = () => {
@@ -501,36 +469,35 @@ const DragDropEditor = () => {
     }
   };
   
-  // Main onDrop function
-  const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
-    e.preventDefault();
-    e.stopPropagation();
+ const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-    updateDragState({
-      showHr: false,
-      isDragging: false,
-    });
+  updateDragState({
+    showHr: false,
+    isDragging: false,
+  });
 
-    setDragIndicator({ show: false });
+  setDragIndicator({ show: false });
 
-    const type = e.dataTransfer.getData('type');
-    const id = e.dataTransfer.getData('id');
-    const draggedData = e.dataTransfer.getData('text/plain');
+  const type = e.dataTransfer.getData('type');
+  const id = e.dataTransfer.getData('id');
+  const draggedData = e.dataTransfer.getData('text/plain');
 
-    const newComponents = JSON.parse(JSON.stringify(components));
+  const newComponents = JSON.parse(JSON.stringify(components));
 
-    if (type && id) {
-      const newComponent = createNewComponent(type, id);
-      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent);
-    } else if (draggedData) {
-      const { section: sourceSection, index: sourceIndex, columnIndex: sourceColumnIndex } = JSON.parse(draggedData);
-      const draggedComponent = removeComponent(newComponents, sourceSection, sourceIndex, sourceColumnIndex);
-      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent);
-    }
+  if (type && id) {
+    const newComponent = createNewComponent(type, id);
+    insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent);
+  } else if (draggedData) {
+    const { section: sourceSection, index: sourceIndex, columnIndex: sourceColumnIndex } = JSON.parse(draggedData);
+    const draggedComponent = removeComponent(newComponents, sourceSection, sourceIndex, sourceColumnIndex);
+    insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent);
+  }
 
-    updateComponents(newComponents);
-    updateEditingState({ draggingIndex: null });
-  }, [components]);
+  updateComponents(newComponents);
+  updateEditingState({ draggingIndex: null });
+}, [components]);
   const undo = () => {
     if (undoRedoState.undoStack.length === 0) return;
     const previousComponents = undoRedoState.undoStack[undoRedoState.undoStack.length - 1];
@@ -764,14 +731,15 @@ const DragDropEditor = () => {
         onSave={handleSaveEmailData}
         onChange={handleEmailDataChange}
       />
-      <DragIndicator
-        mousePosition={dragState.mousePosition}
-        show={dragState.showHr}
-        editorBounds={dragState.editorBounds}
-        isDragging={dragState.isDragging}
-        activeColumn={dragState.activeColumn}
-        isDraggingComponent={dragState.isDraggingComponent}
-      />
+       {dragIndicator.show && (
+        <DragIndicator
+          style={{
+            left: `${dragIndicator.left}px`,
+            top: `${dragIndicator.top}px`,
+            width: `${dragIndicator.width}px`,
+          }}
+        />
+      )}
     </Container>
   );
 };
