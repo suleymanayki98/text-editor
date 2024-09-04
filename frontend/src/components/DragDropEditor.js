@@ -58,7 +58,7 @@ const DragDropEditor = () => {
     emailIndex: null,
     currentEmailData: {},
   });
- 
+
   const [dragState, setDragState] = useState({
     isDragging: false,
     showHr: false,
@@ -75,7 +75,7 @@ const DragDropEditor = () => {
   });
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
   const [emailData, setEmailData] = useState({});
-  
+
 
   const iconStyle = (hover) => ({
     color: hover ? '#015FFB' : 'black',
@@ -96,10 +96,19 @@ const DragDropEditor = () => {
 
   useEffect(() => {
     const handleMouseMove = (event) => {
-      setDragState(prevState => ({ ...prevState, mousePosition: { x: event.clientX, y: event.clientY } }));
+      setDragState((prevState) => ({
+        ...prevState,
+        mousePosition: { x: event.clientX, y: event.clientY },
+      }));
+      setDragIndicator((prevState) => ({
+        ...prevState,
+        left: event.clientX,
+        top: event.clientY,
+      }));
     };
 
     window.addEventListener('mousemove', handleMouseMove);
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
@@ -202,7 +211,7 @@ const DragDropEditor = () => {
     });
   };
 
-  
+
 
   const loadComponents = async () => {
     try {
@@ -376,18 +385,18 @@ const DragDropEditor = () => {
   const onDragOver = useCallback((e, section, index, columnIndex) => {
     e.preventDefault();
     e.stopPropagation();
-  
+
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
     const threshold = rect.height / 2;
-  
+
     setDragIndicator({
       show: true,
       left: rect.left,
       top: mouseY > threshold ? rect.bottom : rect.top,
-      width: rect.width,
+      width: 600,
     });
-  
+
     updateDragState({
       mousePosition: { x: e.clientX, y: e.clientY },
       activeColumn: columnIndex !== undefined ? { left: rect.left, width: rect.width } : null,
@@ -403,14 +412,14 @@ const DragDropEditor = () => {
     });
   };
 
-  
+
   // Helper functions
   const createNewComponent = (type, id) => ({
     type,
     id,
     ...elementConfig[type]
   });
-  
+
   const removeComponent = (components, section, index, columnIndex) => {
     if (columnIndex !== undefined) {
       const indices = index.toString().split('-').map(Number);
@@ -429,7 +438,7 @@ const DragDropEditor = () => {
       return components[section].splice(index, 1)[0];
     }
   };
-  
+
   const insertComponent = (components, section, index, columnIndex, component) => {
     if (columnIndex !== undefined) {
       const indices = index.toString().split('-').map(Number);
@@ -468,36 +477,36 @@ const DragDropEditor = () => {
       components[section].splice(index, 0, component);
     }
   };
-  
- const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
-  e.preventDefault();
-  e.stopPropagation();
 
-  updateDragState({
-    showHr: false,
-    isDragging: false,
-  });
+  const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  setDragIndicator({ show: false });
+    updateDragState({
+      showHr: false,
+      isDragging: false,
+    });
 
-  const type = e.dataTransfer.getData('type');
-  const id = e.dataTransfer.getData('id');
-  const draggedData = e.dataTransfer.getData('text/plain');
+    setDragIndicator({ show: false });
 
-  const newComponents = JSON.parse(JSON.stringify(components));
+    const type = e.dataTransfer.getData('type');
+    const id = e.dataTransfer.getData('id');
+    const draggedData = e.dataTransfer.getData('text/plain');
 
-  if (type && id) {
-    const newComponent = createNewComponent(type, id);
-    insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent);
-  } else if (draggedData) {
-    const { section: sourceSection, index: sourceIndex, columnIndex: sourceColumnIndex } = JSON.parse(draggedData);
-    const draggedComponent = removeComponent(newComponents, sourceSection, sourceIndex, sourceColumnIndex);
-    insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent);
-  }
+    const newComponents = JSON.parse(JSON.stringify(components));
 
-  updateComponents(newComponents);
-  updateEditingState({ draggingIndex: null });
-}, [components]);
+    if (type && id) {
+      const newComponent = createNewComponent(type, id);
+      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent);
+    } else if (draggedData) {
+      const { section: sourceSection, index: sourceIndex, columnIndex: sourceColumnIndex } = JSON.parse(draggedData);
+      const draggedComponent = removeComponent(newComponents, sourceSection, sourceIndex, sourceColumnIndex);
+      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent);
+    }
+
+    updateComponents(newComponents);
+    updateEditingState({ draggingIndex: null });
+  }, [components]);
   const undo = () => {
     if (undoRedoState.undoStack.length === 0) return;
     const previousComponents = undoRedoState.undoStack[undoRedoState.undoStack.length - 1];
@@ -694,11 +703,11 @@ const DragDropEditor = () => {
         onSave={handleSaveEmailData}
         onChange={handleEmailDataChange}
       />
-       {dragIndicator.show && (
+      {dragIndicator.show && (
         <DragIndicator
           style={{
-            left: `${dragIndicator.left}px`,
-            top: `${dragIndicator.top}px`,
+            left: `${dragState.mousePosition.x}px`,
+            top: `${dragState.mousePosition.y}px`,
             width: `${dragIndicator.width}px`,
           }}
         />
