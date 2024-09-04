@@ -579,6 +579,27 @@ const DragDropEditor = () => {
     }
     updateComponents(newComponents);
   }, [components]);
+  const componentRenderers = {
+    [COMPONENT_TYPES.PARAGRAPH]: (componentProps) => (
+      <ParagraphComponent {...componentProps} />
+    ),
+    [COMPONENT_TYPES.H1]: (componentProps) => (
+      <HeadingComponent {...componentProps} />
+    ),
+    [COMPONENT_TYPES.H2]: (componentProps) => (
+      <HeadingComponent2 {...componentProps} />
+    ),
+    [COMPONENT_TYPES.BUTTON]: (componentProps) => (
+      <ButtonComponent {...componentProps} />
+    ),
+    [COMPONENT_TYPES.TWO_COLUMN]: (componentProps) => (
+      <TwoColumnComponent {...componentProps} renderComponent={renderComponent} />
+    ),
+    [COMPONENT_TYPES.ONE_COLUMN]: (componentProps) => (
+      <OneColumnComponent {...componentProps} renderComponent={renderComponent} />
+    ),
+  };
+
   const renderComponent = useCallback((component, section, index, columnIndex) => {
     const isDragging = editingState.draggingIndex &&
       editingState.draggingIndex.section === section &&
@@ -597,85 +618,27 @@ const DragDropEditor = () => {
         onDrop={(e) => onDrop(e, section, index, columnIndex)}
         draggable
       >
-        {component.type === COMPONENT_TYPES.PARAGRAPH && (
-          <ParagraphComponent
-            component={component}
-            section={section}
-            index={index}
-            columnIndex={columnIndex}
-            editingIndex={editingState.editingIndex}
-            setEditingIndex={(newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex }))}
-            handleTextChange={handleTextChange}
-          />
-        )}
-
-        {(component.type === COMPONENT_TYPES.H1) && (
-          <HeadingComponent
-            component={component}
-            section={section}
-            index={index}
-            columnIndex={columnIndex}
-            editingIndex={editingState.editingIndex}
-            setEditingIndex={(newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex }))}
-            handleTextChange={handleTextChange}
-          />
-        )}
-        {(component.type === COMPONENT_TYPES.H2) && (
-          <HeadingComponent2
-            component={component}
-            section={section}
-            index={index}
-            columnIndex={columnIndex}
-            editingIndex={editingState.editingIndex}
-            setEditingIndex={(newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex }))}
-            handleTextChange={handleTextChange}
-          />
-        )}
-
-        {component.type === COMPONENT_TYPES.BUTTON && (
-          <ButtonComponent
-            component={component}
-            section={section}
-            index={index}
-            columnIndex={columnIndex}
-            emailData={emailData}
-            handleOpenModal={handleOpenModal}
-            handleClose={handleClose}
-          />
-        )}
-
-        {component.type === COMPONENT_TYPES.TWO_COLUMN && (
-          <TwoColumnComponent
-            component={component}
-            section={section}
-            index={index}
-            onDrop={onDrop}
-            setActiveColumn={(column) => setDragState(prevState => ({ ...prevState, activeColumn: column }))}
-            setMousePosition={(position) => setDragState(prevState => ({ ...prevState, mousePosition: position }))}
-            setShowHr={(show) => setDragState(prevState => ({ ...prevState, showHr: show }))}
-            setIsDragging={(dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging }))}
-            renderComponent={renderComponent}
-          />
-        )}
-
-        {component.type === COMPONENT_TYPES.ONE_COLUMN && (
-          <OneColumnComponent
-            component={component}
-            section={section}
-            index={index}
-            setActiveColumn={(column) => setDragState(prevState => ({ ...prevState, activeColumn: column }))}
-            setIsDragging={(dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging }))}
-            setMousePosition={(position) => setDragState(prevState => ({ ...prevState, mousePosition: position }))}
-            setShowHr={(show) => setDragState(prevState => ({ ...prevState, showHr: show }))}
-            onDrop={onDrop}
-            renderComponent={renderComponent}
-          />
-        )}
+        {componentRenderers[component.type]({
+          component,
+          section,
+          index,
+          columnIndex,
+          editingIndex: editingState.editingIndex,
+          setEditingIndex: (newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex })),
+          handleTextChange,
+          emailData,
+          handleOpenModal,
+          handleClose,
+          setActiveColumn: (column) => setDragState(prevState => ({ ...prevState, activeColumn: column })),
+          setIsDragging: (dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging })),
+          setMousePosition: (position) => setDragState(prevState => ({ ...prevState, mousePosition: position })),
+          setShowHr: (show) => setDragState(prevState => ({ ...prevState, showHr: show })),
+          onDrop,
+        })}
       </ComponentWrapper>
     );
-  }, [editingState, onDragStart, onDragEnd, onDragOver, onDrop, handleTextChange, handleOpenModal, handleClose, emailData]);
+  }, [editingState, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, handleTextChange, handleOpenModal, handleClose, emailData]);
 
- 
   function updateSidebarPosition(newPosition) {
     setDragState(prevState => ({
       ...prevState,
