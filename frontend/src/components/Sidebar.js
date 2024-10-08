@@ -66,7 +66,7 @@ const SectionTitle = styled.p`
 const Button = styled.button`
   background-color: #ffffff; /* White */
   border: 1px solid ${({ isDragging }) => (isDragging ? '#015FFB' : '#919EAB')}; /* Custom blue or gray */
-  border-radius:  8px;
+  border-radius:  6px;
   width: 110px;
   height: 90px;
   display: flex;
