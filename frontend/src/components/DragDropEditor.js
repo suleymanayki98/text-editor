@@ -15,15 +15,6 @@ import ButtonComponent from './elements/ButtonComponent';
 import TwoColumnComponent from './elements/TwoColumnComponent';
 import OneColumnComponent from './elements/OneColumnComponent';
 
-const Placeholder = styled.div`
-  width: 100%;
-  height: 10px;
-  background-color: transparent;
-  border-top: 2px dashed #0000FF; /* Adjust color as necessary */
-  margin: 0.5rem 0;
-`;
-
-
 const DragIndicator = styled.div`
   position: absolute;
   width: 100%;

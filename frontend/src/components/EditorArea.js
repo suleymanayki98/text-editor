@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, IconButton, Typography } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ComponentRenderer from './ComponentRenderer';
@@ -89,6 +89,17 @@ const EditorArea = ({
       console.log('Source code copied to clipboard!');
     });
   };
+  const updateEditorBounds = useCallback(() => {
+    if (editorRef.current) {
+      const bounds = editorRef.current.getBoundingClientRect();
+      setEditorBounds(prevBounds => {
+        if (JSON.stringify(bounds) !== JSON.stringify(prevBounds)) {
+          return bounds;
+        }
+        return prevBounds;
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (editorRef.current) {
