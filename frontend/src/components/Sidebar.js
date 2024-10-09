@@ -12,6 +12,7 @@ const SidebarContainer = styled.div`
   border-radius: 1.5rem; /* 24px */
   left: ${({ x }) => x}px;
   top: ${({ y }) => y}px;
+  padding: 10px
 `;
 
 const Handle = styled.div`
