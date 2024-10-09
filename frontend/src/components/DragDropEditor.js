@@ -15,7 +15,16 @@ import ButtonComponent from './elements/ButtonComponent';
 import TwoColumnComponent from './elements/TwoColumnComponent';
 import OneColumnComponent from './elements/OneColumnComponent';
 
+const DragIndicator = styled.div`
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  background-color: #0000FF;
+  transition: all 0.1s ease;
+`;
+
 const ComponentWrapper = styled.div`
+  position: relative;
   margin-bottom: 0.625rem;
   cursor: move;
   padding: 0.5rem;
@@ -23,16 +32,6 @@ const ComponentWrapper = styled.div`
     opacity: 0.5;
     border: 1px dashed black;
   `}
-`;
-
-const DragIndicator = styled.div`
-  position: fixed;
-  width: 400px;
-  height: 4px;
-  background-color: #0000FF;
-  pointer-events: none;
-  z-index: 50;
-  transition: all 50ms linear;
 `;
 const DragDropEditor = () => {
   const [components, setComponents] = useState({ description: [], about: [] });
@@ -48,11 +47,9 @@ const DragDropEditor = () => {
 
   const [dragIndicator, setDragIndicator] = useState({
     show: false,
-    left: 0,
-    top: 0,
-    width: 400,
+    position: 'before', // 'before' or 'after'
+    targetIndex: null,
   });
-
   const [modalState, setModalState] = useState({
     isOpen: false,
     emailIndex: null,
@@ -390,18 +387,24 @@ const DragDropEditor = () => {
     const mouseY = e.clientY - rect.top;
     const threshold = rect.height / 2;
 
+    const position = mouseY > threshold ? 'after' : 'before';
+
     setDragIndicator({
       show: true,
-      left: rect.left,
-      top: mouseY > threshold ? rect.bottom : rect.top,
-      width: 600,
+      position: position,
+      targetIndex: index,
     });
 
     updateDragState({
-      mousePosition: { x: e.clientX, y: e.clientY },
       activeColumn: columnIndex !== undefined ? { left: rect.left, width: rect.width } : null,
+      placeholderPosition: { 
+        section, 
+        index: index,
+        position: position
+      },
     });
   }, []);
+
 
 
   const onDragEnd = () => {
@@ -487,7 +490,7 @@ const DragDropEditor = () => {
       isDragging: false,
     });
 
-    setDragIndicator({ show: false });
+    setDragIndicator({ show: false, position: 'before', targetIndex: null });
 
     const type = e.dataTransfer.getData('type');
     const id = e.dataTransfer.getData('id');
@@ -495,18 +498,20 @@ const DragDropEditor = () => {
 
     const newComponents = JSON.parse(JSON.stringify(components));
 
+    const insertIndex = dragIndicator.position === 'before' ? targetIndex : targetIndex + 1;
+
     if (type && id) {
       const newComponent = createNewComponent(type, id);
-      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent);
+      insertComponent(newComponents, targetSection, insertIndex, targetColumnIndex, newComponent);
     } else if (draggedData) {
       const { section: sourceSection, index: sourceIndex, columnIndex: sourceColumnIndex } = JSON.parse(draggedData);
       const draggedComponent = removeComponent(newComponents, sourceSection, sourceIndex, sourceColumnIndex);
-      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent);
+      insertComponent(newComponents, targetSection, insertIndex, targetColumnIndex, draggedComponent);
     }
 
     updateComponents(newComponents);
     updateEditingState({ draggingIndex: null });
-  }, [components]);
+  }, [components, dragIndicator]);
   const undo = () => {
     if (undoRedoState.undoStack.length === 0) return;
     const previousComponents = undoRedoState.undoStack[undoRedoState.undoStack.length - 1];
@@ -627,6 +632,9 @@ const DragDropEditor = () => {
         onDrop={(e) => onDrop(e, section, index, columnIndex)}
         draggable
       >
+        {dragIndicator.show && dragIndicator.targetIndex === index && dragIndicator.position === 'before' && (
+          <DragIndicator style={{ top: 0 }} />
+        )}
         {componentRenderers[component.type]({
           component,
           section,
@@ -640,20 +648,16 @@ const DragDropEditor = () => {
           handleClose,
           setActiveColumn: (column) => setDragState(prevState => ({ ...prevState, activeColumn: column })),
           setIsDragging: (dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging })),
-          setMousePosition: (position) => setDragState(prevState => ({ ...prevState, mousePosition: position })),
           setShowHr: (show) => setDragState(prevState => ({ ...prevState, showHr: show })),
           onDrop,
         })}
+        {dragIndicator.show && dragIndicator.targetIndex === index && dragIndicator.position === 'after' && (
+          <DragIndicator style={{ bottom: 0 }} />
+        )}
       </ComponentWrapper>
     );
-  }, [editingState, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, handleTextChange, handleOpenModal, handleClose, emailData]);
+  }, [editingState, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, handleTextChange, handleOpenModal, handleClose, emailData, dragIndicator]);
 
-  function updateSidebarPosition(newPosition) {
-    setDragState(prevState => ({
-      ...prevState,
-      sidebarPosition: newPosition
-    }));
-  }
 
   return (
     <Container>
@@ -703,15 +707,6 @@ const DragDropEditor = () => {
         onSave={handleSaveEmailData}
         onChange={handleEmailDataChange}
       />
-      {dragIndicator.show && (
-        <DragIndicator
-          style={{
-            left: `${dragState.mousePosition.x}px`,
-            top: `${dragState.mousePosition.y}px`,
-            width: `${dragIndicator.width}px`,
-          }}
-        />
-      )}
     </Container>
   );
 };
