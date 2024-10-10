@@ -11,9 +11,10 @@ const EditorContainer = styled.div`
 
 const TextArea = styled.textarea`
   width: 100%;
+  height: 400px;
   font-family: 'Courier New', monospace;
   line-height: 1.5em;
-  padding-left: 12px;
+  padding-left: 40px;
   border: none;
   outline: none;
   &:hover {

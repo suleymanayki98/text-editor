@@ -41,7 +41,6 @@ const TwoColumnComponent = ({
   index,
   onDrop,
   setActiveColumn,
-  setMousePosition,
   setIsDragging,
   renderComponent,
 }) => {
@@ -63,7 +62,6 @@ const TwoColumnComponent = ({
               width: columnRect.width,
               height: columnRect.height,
             });
-            setMousePosition({ x: e.clientX, y: e.clientY });
             setHrTop(e.clientY - columnRect.top);
             setHrVisible(true);
             setIsDragging(true);
@@ -83,7 +81,6 @@ const TwoColumnComponent = ({
             setIsDragging(false);
           }}
         >
-          {hrVisible && <HorizontalRule top={hrTop} visible={hrVisible} />}
           {(column || []).map((nestedComponent, nestedIndex) =>
             renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, colIndex)
           )}

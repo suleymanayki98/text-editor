@@ -337,9 +337,9 @@ const DragDropEditor = () => {
   };
 
   const updateSourceCode = (updatedComponents) => {
-    const generateCode = (sectionComponents) =>
-      sectionComponents
-        .map(component => {
+    const generateCode = (sectionComponents) => {
+      return sectionComponents
+        .map((component) => {
           if (component.type === COMPONENT_TYPES.PARAGRAPH) {
             return `<p>${component.text || ''}</p>`;
           }
@@ -347,25 +347,31 @@ const DragDropEditor = () => {
             return `<button>${component.text || 'Contact me'}</button>`;
           }
           if (component.type === COMPONENT_TYPES.H1) {
-            return `<h1 class="${component.className || 'text-4xl font-bold leading-normal m-0'}">${component.text || ''}</h1>`;
+            return `<h1>${component.text || ''}</h1>`;
           }
           if (component.type === COMPONENT_TYPES.H2) {
-            return `<h2 class="${component.className || 'text-3xl font-bold leading-normal m-0'}">${component.text || ''}</h2>`;
+            return `<h2>${component.text || ''}</h2>`;
           }
           if (component.type === COMPONENT_TYPES.TWO_COLUMN) {
-            return `<div class="two-column-layout">
-              <div class="column">${generateCode(component.columns[0])}</div>
-              <div class="column">${generateCode(component.columns[1])}</div>
-            </div>`;
+            return `
+              <div class="two-column-layout">
+                <div class="column">${generateCode(component.columns[0])}</div>
+                <div class="column">${generateCode(component.columns[1])}</div>
+              </div>
+            `;
           }
           if (component.type === COMPONENT_TYPES.ONE_COLUMN) {
-            return `<div class="one-column-layout">
-              ${generateCode(component.content)}
-            </div>`;
+            return `
+              <div class="one-column-layout">
+                ${generateCode(component.content)}
+              </div>
+            `;
           }
-          return '';
+          return ''; // Handle other component types or default behavior here
         })
-        .join('\n');
+        .join('\n'); // Join all the generated HTML code together
+    };
+    
 
     const newSourceCode = {
       description: generateCode(updatedComponents.description),
@@ -442,7 +448,12 @@ const DragDropEditor = () => {
     }
   };
 
-  const insertComponent = (components, section, index, columnIndex, component) => {
+  const insertComponent = (components, section, index, columnIndex, component, position) => {
+    const insertAt = (arr, idx, item, pos) => {
+      if (pos === 'after') idx++;
+      arr.splice(idx, 0, item);
+    };
+  
     if (columnIndex !== undefined) {
       const indices = index.toString().split('-').map(Number);
       let current = components[section];
@@ -450,18 +461,18 @@ const DragDropEditor = () => {
         if (i === indices.length - 1) {
           if (!current[indices[i]]) {
             if (current.type === COMPONENT_TYPES.ONE_COLUMN) {
-              current.content.push(component);
+              insertAt(current.content, indices[i], component, position);
+            } else if (current.type === COMPONENT_TYPES.TWO_COLUMN) {
+              insertAt(current.columns[columnIndex], indices[i], component, position);
             } else {
-              current[indices[i]] = { type: COMPONENT_TYPES.TWO_COLUMN, columns: [[], []] };
-              current[indices[i]].columns[columnIndex].push(component);
+              insertAt(current, indices[i], component, position);
             }
           } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
-            current[indices[i]].content.push(component);
+            insertAt(current[indices[i]].content, 0, component, position);
+          } else if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+            insertAt(current[indices[i]].columns[columnIndex], 0, component, position);
           } else {
-            if (!current[indices[i]].columns) {
-              current[indices[i]].columns = [[], []];
-            }
-            current[indices[i]].columns[columnIndex].push(component);
+            insertAt(current, indices[i], component, position);
           }
           return;
         }
@@ -477,41 +488,41 @@ const DragDropEditor = () => {
         }
       }
     } else {
-      components[section].splice(index, 0, component);
+      insertAt(components[section], index, component, position);
     }
   };
-
   const onDrop = useCallback((e, targetSection, targetIndex, targetColumnIndex) => {
     e.preventDefault();
     e.stopPropagation();
-
+  
     updateDragState({
       showHr: false,
       isDragging: false,
     });
-
-    setDragIndicator({ show: false, position: 'before', targetIndex: null });
-
+  
+    setDragIndicator({ show: false, position: 'before', targetIndex: null, targetColumnIndex: null });
+  
     const type = e.dataTransfer.getData('type');
     const id = e.dataTransfer.getData('id');
     const draggedData = e.dataTransfer.getData('text/plain');
-
+  
     const newComponents = JSON.parse(JSON.stringify(components));
-
-    const insertIndex = dragIndicator.position === 'before' ? targetIndex : targetIndex + 1;
-
+  
+    const position = dragIndicator.position; // 'before' or 'after'
+  
     if (type && id) {
       const newComponent = createNewComponent(type, id);
-      insertComponent(newComponents, targetSection, insertIndex, targetColumnIndex, newComponent);
+      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, newComponent, position);
     } else if (draggedData) {
       const { section: sourceSection, index: sourceIndex, columnIndex: sourceColumnIndex } = JSON.parse(draggedData);
       const draggedComponent = removeComponent(newComponents, sourceSection, sourceIndex, sourceColumnIndex);
-      insertComponent(newComponents, targetSection, insertIndex, targetColumnIndex, draggedComponent);
+      insertComponent(newComponents, targetSection, targetIndex, targetColumnIndex, draggedComponent, position);
     }
-
+  
     updateComponents(newComponents);
     updateEditingState({ draggingIndex: null });
-  }, [components, dragIndicator]);
+  }, [components, dragIndicator, createNewComponent, removeComponent, insertComponent, updateComponents, updateEditingState]);
+
   const undo = () => {
     if (undoRedoState.undoStack.length === 0) return;
     const previousComponents = undoRedoState.undoStack[undoRedoState.undoStack.length - 1];

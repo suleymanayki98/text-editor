@@ -32,7 +32,6 @@ const OneColumnComponent = ({
   index,
   setIsDragging,
   setActiveColumn,
-  setMousePosition,
   onDrop,
   renderComponent,
 }) => {
@@ -53,7 +52,6 @@ const OneColumnComponent = ({
             height: columnRect.height,
           });
           setIsDragging(true);
-          setMousePosition({ x: e.clientX, y: e.clientY });
           setHrTop(e.clientY - columnRect.top);
           setHrVisible(true);
         }}
