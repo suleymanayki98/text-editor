@@ -14,18 +14,6 @@ const OneColumnContent = styled(Box)`
   position: relative;
 `;
 
-const HorizontalRule = styled.hr`
-  border: none;
-  border-top: 3px solid #0000FF;
-  position: absolute;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-  transform: translateY(${({ top }) => top}px);
-  opacity: ${({ visible }) => (visible ? 1 : 0)};
-  transition: all 50ms linear;
-`;
-
 const OneColumnComponent = ({
   component,
   section,
@@ -35,8 +23,6 @@ const OneColumnComponent = ({
   onDrop,
   renderComponent,
 }) => {
-  const [hrTop, setHrTop] = useState(0);
-  const [hrVisible, setHrVisible] = useState(false);
 
   return (
     <OneColumnWrapper>
@@ -52,20 +38,13 @@ const OneColumnComponent = ({
             height: columnRect.height,
           });
           setIsDragging(true);
-          setHrTop(e.clientY - columnRect.top);
-          setHrVisible(true);
-        }}
-        onDragLeave={(e) => {
-          setHrVisible(false);
         }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
           onDrop(e, section, index, 0);
-          setHrVisible(false);
         }}
       >
-        {hrVisible && <HorizontalRule top={hrTop} visible={hrVisible} />}
         {(component.content || []).map((nestedComponent, nestedIndex) =>
           renderComponent(nestedComponent, section, `${index}-${nestedIndex}`, 0)
         )}

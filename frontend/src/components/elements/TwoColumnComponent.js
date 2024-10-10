@@ -23,18 +23,6 @@ const ColumnWrapper = styled(Box)`
   position: relative;
 `;
 
-const HorizontalRule = styled.hr`
-  border: none;
-  border-top: 3px solid #0000FF;
-  position: absolute;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-  transform: translateY(${({ top }) => top}px);
-  opacity: ${({ visible }) => (visible ? 1 : 0)};
-  transition: all 50ms linear;
-`;
-
 const TwoColumnComponent = ({
   component,
   section,
@@ -44,8 +32,6 @@ const TwoColumnComponent = ({
   setIsDragging,
   renderComponent,
 }) => {
-  const [hrTop, setHrTop] = useState(0);
-  const [hrVisible, setHrVisible] = useState(false);
 
   return (
     <TwoColumnWrapper>
@@ -62,22 +48,18 @@ const TwoColumnComponent = ({
               width: columnRect.width,
               height: columnRect.height,
             });
-            setHrTop(e.clientY - columnRect.top);
-            setHrVisible(true);
             setIsDragging(true);
           }}
           onDragLeave={(e) => {
             e.preventDefault();
             e.stopPropagation();
             setActiveColumn(null);
-            setHrVisible(false);
           }}
           onDrop={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onDrop(e, section, index, colIndex);
             setActiveColumn(null);
-            setHrVisible(false);
             setIsDragging(false);
           }}
         >
