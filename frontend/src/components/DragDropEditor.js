@@ -14,6 +14,7 @@ import HeadingComponent2 from './elements/HeadingComponent2';
 import ButtonComponent from './elements/ButtonComponent';
 import TwoColumnComponent from './elements/TwoColumnComponent';
 import OneColumnComponent from './elements/OneColumnComponent';
+import ImageTextComponent from './elements/ImageTextComponent';
 
 const DragIndicator = styled.div`
   position: absolute;
@@ -58,8 +59,6 @@ const DragDropEditor = () => {
 
   const [dragState, setDragState] = useState({
     isDragging: false,
-    showHr: false,
-    mousePosition: { x: 0, y: 0 },
     draggableArea: null,
     editorBounds: null,
     activeColumn: null,
@@ -203,7 +202,6 @@ const DragDropEditor = () => {
     e.dataTransfer.setData('text/plain', JSON.stringify({ section, index, columnIndex }));
     updateDragState({
       isDragging: true,
-      showHr: true,
       isDraggingComponent: true
     });
   };
@@ -367,6 +365,14 @@ const DragDropEditor = () => {
               </div>
             `;
           }
+          if (component.type === COMPONENT_TYPES.IMAGE_TEXT) {
+            return `
+              <div class="image-text-component">
+                <img src="${component.imageUrl || ''}" alt="Component image" />
+                ${component.paragraphs.map(p => `<p>${p}</p>`).join('\n')}
+              </div>
+            `;
+          }
           return ''; // Handle other component types or default behavior here
         })
         .join('\n'); // Join all the generated HTML code together
@@ -415,7 +421,6 @@ const DragDropEditor = () => {
 
   const onDragEnd = () => {
     updateDragState({
-      showHr: false,
       isDragging: false,
       isDraggingComponent: false
     });
@@ -428,6 +433,123 @@ const DragDropEditor = () => {
     id,
     ...elementConfig[type]
   });
+  const handleImageUpload = useCallback((e, section, index, columnIndex) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newComponents = JSON.parse(JSON.stringify(components));
+        const updateImage = (component) => {
+          if (component.type === COMPONENT_TYPES.IMAGE_TEXT) {
+            component.imageUrl = reader.result;
+          }
+        };
+
+        if (columnIndex !== undefined) {
+          const indices = index.toString().split('-').map(Number);
+          let current = newComponents[section];
+          for (let i = 0; i < indices.length; i++) {
+            if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+              current = current[indices[i]].columns[columnIndex];
+            } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+              current = current[indices[i]].content;
+            } else {
+              updateImage(current[indices[i]]);
+              break;
+            }
+          }
+        } else {
+          updateImage(newComponents[section][index]);
+        }
+        updateComponents(newComponents);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [components, updateComponents]);
+
+
+  const handleParagraphChange = useCallback((e, section, index, paragraphIndex, columnIndex) => {
+    const newComponents = JSON.parse(JSON.stringify(components));
+    const updateParagraph = (component) => {
+      if (component.type === COMPONENT_TYPES.IMAGE_TEXT) {
+        component.paragraphs[paragraphIndex] = e.target.value;
+      }
+    };
+
+    if (columnIndex !== undefined) {
+      const indices = index.toString().split('-').map(Number);
+      let current = newComponents[section];
+      for (let i = 0; i < indices.length; i++) {
+        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+          current = current[indices[i]].columns[columnIndex];
+        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+          current = current[indices[i]].content;
+        } else {
+          updateParagraph(current[indices[i]]);
+          break;
+        }
+      }
+    } else {
+      updateParagraph(newComponents[section][index]);
+    }
+    updateComponents(newComponents);
+  }, [components, updateComponents]);
+
+ 
+  const addParagraph = useCallback((section, index, columnIndex) => {
+    const newComponents = JSON.parse(JSON.stringify(components));
+    const addNewParagraph = (component) => {
+      if (component.type === COMPONENT_TYPES.IMAGE_TEXT) {
+        component.paragraphs.push('');
+      }
+    };
+
+    if (columnIndex !== undefined) {
+      const indices = index.toString().split('-').map(Number);
+      let current = newComponents[section];
+      for (let i = 0; i < indices.length; i++) {
+        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+          current = current[indices[i]].columns[columnIndex];
+        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+          current = current[indices[i]].content;
+        } else {
+          addNewParagraph(current[indices[i]]);
+          break;
+        }
+      }
+    } else {
+      addNewParagraph(newComponents[section][index]);
+    }
+    updateComponents(newComponents);
+  }, [components, updateComponents]);
+
+  const removeParagraph = useCallback((section, index, paragraphIndex, columnIndex) => {
+    const newComponents = JSON.parse(JSON.stringify(components));
+    const removeExistingParagraph = (component) => {
+      if (component.type === COMPONENT_TYPES.IMAGE_TEXT) {
+        component.paragraphs.splice(paragraphIndex, 1);
+      }
+    };
+
+    if (columnIndex !== undefined) {
+      const indices = index.toString().split('-').map(Number);
+      let current = newComponents[section];
+      for (let i = 0; i < indices.length; i++) {
+        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
+          current = current[indices[i]].columns[columnIndex];
+        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
+          current = current[indices[i]].content;
+        } else {
+          removeExistingParagraph(current[indices[i]]);
+          break;
+        }
+      }
+    } else {
+      removeExistingParagraph(newComponents[section][index]);
+    }
+    updateComponents(newComponents);
+  }, [components, updateComponents]);
+
 
   const removeComponent = (components, section, index, columnIndex) => {
     if (columnIndex !== undefined) {
@@ -496,7 +618,6 @@ const DragDropEditor = () => {
     e.stopPropagation();
   
     updateDragState({
-      showHr: false,
       isDragging: false,
     });
   
@@ -586,24 +707,28 @@ const DragDropEditor = () => {
 
   const handleTextChange = useCallback((e, section, index, columnIndex) => {
     const newComponents = JSON.parse(JSON.stringify(components));
+    const updateNestedComponent = (current, indices) => {
+      if (indices.length === 1) {
+        current[indices[0]].text = e.target.value;
+        return;
+      }
+      if (current[indices[0]].type === COMPONENT_TYPES.TWO_COLUMN) {
+        updateNestedComponent(current[indices[0]].columns[columnIndex], indices.slice(1));
+      } else if (current[indices[0]].type === COMPONENT_TYPES.ONE_COLUMN) {
+        updateNestedComponent(current[indices[0]].content, indices.slice(1));
+      } else {
+        updateNestedComponent(current[indices[0]], indices.slice(1));
+      }
+    };
+
     if (columnIndex !== undefined) {
       const indices = index.split('-').map(Number);
-      let current = newComponents[section];
-      for (let i = 0; i < indices.length - 1; i++) {
-        if (current[indices[i]].type === COMPONENT_TYPES.TWO_COLUMN) {
-          current = current[indices[i]].columns[columnIndex];
-        } else if (current[indices[i]].type === COMPONENT_TYPES.ONE_COLUMN) {
-          current = current[indices[i]].content;
-        } else {
-          current = current[indices[i]];
-        }
-      }
-      current[indices[indices.length - 1]].text = e.target.value;
+      updateNestedComponent(newComponents[section], indices);
     } else {
       newComponents[section][index].text = e.target.value;
     }
     updateComponents(newComponents);
-  }, [components]);
+  }, [components, updateComponents]);
   const componentRenderers = {
     [COMPONENT_TYPES.PARAGRAPH]: (componentProps) => (
       <ParagraphComponent {...componentProps} />
@@ -623,6 +748,9 @@ const DragDropEditor = () => {
     [COMPONENT_TYPES.ONE_COLUMN]: (componentProps) => (
       <OneColumnComponent {...componentProps} renderComponent={renderComponent} />
     ),
+    [COMPONENT_TYPES.IMAGE_TEXT]: (componentProps) => (
+      <ImageTextComponent {...componentProps} />
+    ),
   };
 
   const renderComponent = useCallback((component, section, index, columnIndex) => {
@@ -631,44 +759,47 @@ const DragDropEditor = () => {
       editingState.draggingIndex.index === index &&
       editingState.draggingIndex.columnIndex === columnIndex;
 
-    return (
-      <ComponentWrapper
-        key={`${component.id}-${columnIndex}`}
-        data-index={index}
-        isDragging={isDragging}
-        onDragStart={(e) => onDragStart(e, section, index, columnIndex)}
-        onDragEnd={onDragEnd}
-        onDragOver={(e) => onDragOver(e, section, index, columnIndex)}
-        onDragLeave={onDragLeave}
-        onDrop={(e) => onDrop(e, section, index, columnIndex)}
-        draggable
-      >
-        {dragIndicator.show && dragIndicator.targetIndex === index && dragIndicator.position === 'before' && (
-          <DragIndicator style={{ top: 0 }} />
-        )}
-        {componentRenderers[component.type]({
-          component,
-          section,
-          index,
-          columnIndex,
-          editingIndex: editingState.editingIndex,
-          setEditingIndex: (newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex })),
-          handleTextChange,
-          emailData,
-          handleOpenModal,
-          handleClose,
-          setActiveColumn: (column) => setDragState(prevState => ({ ...prevState, activeColumn: column })),
-          setIsDragging: (dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging })),
-          setShowHr: (show) => setDragState(prevState => ({ ...prevState, showHr: show })),
-          onDrop,
-        })}
-        {dragIndicator.show && dragIndicator.targetIndex === index && dragIndicator.position === 'after' && (
-          <DragIndicator style={{ bottom: 0 }} />
-        )}
-      </ComponentWrapper>
-    );
-  }, [editingState, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, handleTextChange, handleOpenModal, handleClose, emailData, dragIndicator]);
-
+      return (
+        <ComponentWrapper
+          key={`${component.id}-${columnIndex}`}
+          data-index={index}
+          isDragging={isDragging}
+          onDragStart={(e) => onDragStart(e, section, index, columnIndex)}
+          onDragEnd={onDragEnd}
+          onDragOver={(e) => onDragOver(e, section, index, columnIndex)}
+          onDragLeave={onDragLeave}
+          onDrop={(e) => onDrop(e, section, index, columnIndex)}
+          draggable
+        >
+          {dragIndicator.show && dragIndicator.targetIndex === index && dragIndicator.position === 'before' && (
+            <DragIndicator style={{ top: 0 }} />
+          )}
+          {componentRenderers[component.type]({
+            component,
+            section,
+            index,
+            columnIndex,
+            editingIndex: editingState.editingIndex,
+            setEditingIndex: (newIndex) => setEditingState(prevState => ({ ...prevState, editingIndex: newIndex })),
+            handleTextChange,
+            emailData,
+            handleOpenModal,
+            handleClose,
+            setActiveColumn: (column) => setDragState(prevState => ({ ...prevState, activeColumn: column })),
+            setIsDragging: (dragging) => setDragState(prevState => ({ ...prevState, isDragging: dragging })),
+            onDrop,
+            handleImageUpload,
+            handleParagraphChange,
+            addParagraph,
+            removeParagraph,
+          })}
+          {dragIndicator.show && dragIndicator.targetIndex === index && dragIndicator.position === 'after' && (
+            <DragIndicator style={{ bottom: 0 }} />
+          )}
+        </ComponentWrapper>
+      );
+    }, [editingState, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, handleTextChange, handleOpenModal, handleClose, emailData, dragIndicator, handleImageUpload, handleParagraphChange, addParagraph, removeParagraph]);
+  
 
   return (
     <Container>

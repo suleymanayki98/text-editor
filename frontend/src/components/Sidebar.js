@@ -12,7 +12,8 @@ const SidebarContainer = styled.div`
   border-radius: 1.5rem; /* 24px */
   left: ${({ x }) => x}px;
   top: ${({ y }) => y}px;
-  padding: 10px
+  display: flex;
+  flex-direction: column;
 `;
 
 const Handle = styled.div`
@@ -52,6 +53,31 @@ const Divider = styled.hr`
   margin-bottom: 0;
 `;
 
+const ScrollableContent = styled.div`
+  overflow-y: auto;
+  flex-grow: 1;
+  padding: 8px;
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 4px; /* İnceltilmiş scroll genişliği */
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: #F4F6F8; /* Arkaplan rengi */
+    border-radius: 10px; /* Scroll bar yuvarlama */
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #919EAB; /* Scroll rengi */
+    border-radius: 10px; /* Yuvarlak köşeler */
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: #637381; /* Scroll üzerindeyken renk */
+  }
+`;
+
 const SectionTitle = styled.p`
   font-size: 0.875rem; /* 14px */
   color: #637381; 
@@ -61,13 +87,13 @@ const SectionTitle = styled.p`
   width: 228px;
   height: 22px;
   margin-bottom: 0.125rem;
-  margin-top: 0;
+  margin-top: 0.5rem;
 `;
 
 const Button = styled.button`
   background-color: #ffffff; /* White */
   border: 1px solid ${({ isDragging }) => (isDragging ? '#015FFB' : '#919EAB')}; /* Custom blue or gray */
-  border-radius:  6px;
+  border-radius: 6px;
   width: 110px;
   height: 90px;
   display: flex;
@@ -162,7 +188,6 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
       y={sidebarPosition.y}
       onMouseDown={handleMouseDown}
     >
-      
       <Divider />
       <Handle className="handle">
         <Title>Add Element</Title>
@@ -170,7 +195,11 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
           <Icon icon="ic:baseline-close" width="24" height="24" />
         </CloseButton>
       </Handle>
-      <div style={{ padding: '8px' }}>
+      <ScrollableContent>
+        <SectionTitle>Image & Text</SectionTitle>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          {renderButton(COMPONENT_TYPES.IMAGE_TEXT, "mdi:image-text", "Image & Text")}
+        </div>
         <SectionTitle>Basics</SectionTitle>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           {renderButton(COMPONENT_TYPES.PARAGRAPH, "mdi:text", "Text")}
@@ -185,7 +214,7 @@ const Sidebar = ({ sidebarPosition, setSidebarPosition, toggleSidebar, COMPONENT
           {renderButton(COMPONENT_TYPES.H1, "icon-park-outline:h1", "H1")}
           {renderButton(COMPONENT_TYPES.H2, "icon-park-outline:h2", "H2")}
         </div>
-      </div>
+      </ScrollableContent>
     </SidebarContainer>
   );
 };
